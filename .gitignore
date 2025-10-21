@@ -15,7 +15,7 @@ __pycache__/
 venv/
 env/
 .env.*
-!.env.example
+!.env.sample
 
 # ------------------------------
 # Caches and logs
