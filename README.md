@@ -45,8 +45,8 @@ cd back-end
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate     # Windows
-source .venv/bin/activate  # macOS / Linux
+source .venv/Scripts/activate     # Windows
+source .venv/bin/activate         # macOS / Linux
 ```
 
 ### 3. Install dependencies
