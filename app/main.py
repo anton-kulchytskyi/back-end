@@ -1,10 +1,12 @@
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-from app.routers import router
+
 from app.config.settings import settings
+from app.routers import router
 
 app = FastAPI(title=settings.PROJECT_NAME)
+
 
 app.add_middleware(
     CORSMiddleware,
