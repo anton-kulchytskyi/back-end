@@ -1,0 +1,19 @@
+repos:
+  # 🔹 Black — форматування коду
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+
+  # 🔹 isort — сортування імпортів
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+
+  # 🔹 Ruff — швидкий лінтер і автофіксер
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.7
+    hooks:
+      - id: ruff
+        args: [--fix]
