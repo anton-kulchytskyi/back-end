@@ -4,29 +4,32 @@
 
 This project is a basic **FastAPI** setup following best practices.
 It includes an organized module structure (`config`, `core`, `db`, `routers`, `schemas`, `services`, `utils`) and a simple **health check endpoint** for testing.
-The application is fully containerized using **Docker** for easy local development and deployment.
+The application is fully containerized using **Docker** and **Docker Compose** with **PostgreSQL** and **Redis** databases.
 
 ### 🧩 Project Structure
 
 ```
 /
 ├── app/
-│ ├── config/
-│ │ ├── constants.py
-│ │ └── cors.py
-│ ├── core/
-│ ├── db/
-│ ├── routers/
-│ │ └── health.py
-│ ├── schemas/
-│ ├── services/
-│ ├── utils/
-│ └── main.py
+│   ├── config/
+│   │   └── settings.py
+│   ├── core/
+│   │   ├── database.py
+│   │   └── redis.py
+│   ├── db/
+│   ├── routers/
+│   │   └── health.py
+│   ├── schemas/
+│   ├── services/
+│   ├── utils/
+│   └── main.py
 ├── tests/
-│ └── test_health.py
+│   └── test_health.py
 ├── .dockerignore
 ├── .env.sample
+├── docker-compose.yml
 ├── Dockerfile
+├── start.sh
 ├── pytest.ini
 ├── README.md
 └── requirements.txt
@@ -41,7 +44,14 @@ git clone <repo-url>
 cd back-end
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create environment file
+
+```bash
+cp .env.sample .env
+# Edit .env if needed
+```
+
+### 3. Create and activate a virtual environment
 
 ```bash
 python -m venv .venv
@@ -49,24 +59,44 @@ source .venv/Scripts/activate     # Windows
 source .venv/bin/activate         # macOS / Linux
 ```
 
-### 3. Install dependencies
+### 4. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
+## ▶️ Run the Application
 
-## ▶️ Run the Application locally
+### With Docker Compose (Recommended)
 
-Start the FastAPI app with **Uvicorn** (auto-reload enabled):
+Start all services (PostgreSQL, Redis, FastAPI):
 
 ```bash
-uvicorn app.main:app --reload
+docker-compose up --build
 ```
 
 Then open your browser at:
-👉 [http://127.0.0.1:8000](http://127.0.0.1:8000)
+👉 [http://localhost:8000](http://localhost:8000)
 
+### Locally (without Docker)
+
+Start databases only:
+
+```bash
+docker-compose up postgres redis
+```
+
+Update `.env` for local development:
+```bash
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/fastapi_db
+REDIS_URL=redis://localhost:6379/0
+```
+
+Run the application:
+
+```bash
+python -m app.main
+```
 
 ## 🧪 Run Tests
 
@@ -76,35 +106,39 @@ To execute tests using **pytest**:
 pytest
 ```
 
-## 🐳 Run with Docker
+## 🐳 Docker Commands
 
-### 1. Build the Docker image
-
+### Start all services
 ```bash
-docker build -t fastapi-app .
+docker-compose up --build
 ```
 
-### 2. Run the container
-
+### Start in detached mode
 ```bash
-docker run -d -p 8000:8000 fastapi-app
+docker-compose up -d
 ```
 
-Then visit:
-👉 [http://localhost:8000](http://localhost:8000)
-
-### 3. Stop the container
-
-List running containers:
-
+### View logs
 ```bash
-docker ps
+docker-compose logs -f app
 ```
 
-Then stop it by container ID or name:
-
+### Stop all services
 ```bash
-docker stop <container_id>
+docker-compose down
 ```
 
+### Remove volumes (⚠️ deletes data)
+```bash
+docker-compose down -v
+```
 
+### Access PostgreSQL
+```bash
+docker exec -it fastapi_postgres psql -U postgres -d fastapi_db
+```
+
+### Access Redis CLI
+```bash
+docker exec -it fastapi_redis redis-cli
+```
