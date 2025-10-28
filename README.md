@@ -29,6 +29,7 @@ The application is fully containerized using **Docker** for easy local developme
 ├── Dockerfile
 ├── pytest.ini
 ├── README.md
+├── requirements-dev.txt
 └── requirements.txt
 ```
 
@@ -49,12 +50,19 @@ source .venv/Scripts/activate     # Windows
 source .venv/bin/activate         # macOS / Linux
 ```
 
-### 3. Install dependencies
+### 3. Install dependencies and activate code quality hooks
+
+Install core and development dependencies (including pre-commit, Ruff, Black, and isort):
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
+Next, activate the Git pre-commit hooks
+
+```bash
+pre-commit install
+```
 
 ## ▶️ Run the Application locally
 
@@ -106,5 +114,3 @@ Then stop it by container ID or name:
 ```bash
 docker stop <container_id>
 ```
-
-
