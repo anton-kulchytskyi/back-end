@@ -1,12 +1,14 @@
 from contextlib import asynccontextmanager
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
-from app.routers import router
 from app.config.settings import settings
-from app.core.database import init_db, close_db
-from app.core.redis import init_redis, close_redis
+from app.core.database import close_db, init_db
+from app.core.redis import close_redis, init_redis
+from app.routers import router
+
 
 # Lifespan context manager for startup and shutdown events.
 @asynccontextmanager
@@ -16,9 +18,9 @@ async def lifespan(app: FastAPI):
     await init_db()
     print("✅ PostgreSQL connected successfully")
     await init_redis()
-    
+
     yield
-    
+
     # Shutdown
     print("🛑 Shutting down application...")
     await close_db()
@@ -26,10 +28,7 @@ async def lifespan(app: FastAPI):
     await close_redis()
 
 
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    lifespan=lifespan
-)
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

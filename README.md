@@ -32,6 +32,7 @@ The application is fully containerized using **Docker** and **Docker Compose** w
 ├── start.sh
 ├── pytest.ini
 ├── README.md
+├── requirements-dev.txt
 └── requirements.txt
 ```
 
@@ -59,13 +60,19 @@ source .venv/Scripts/activate     # Windows
 source .venv/bin/activate         # macOS / Linux
 ```
 
-### 4. Install dependencies
+### 3. Install dependencies and activate code quality hooks
+
+Install core and development dependencies (including pre-commit, Ruff, Black, and isort):
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-## ▶️ Run the Application
+Next, activate the Git pre-commit hooks
+
+```bash
+pre-commit install
+```
 
 ### With Docker Compose (Recommended)
 
