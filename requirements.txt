@@ -3,3 +3,9 @@ httpx==0.28.1
 uvicorn==0.38.0
 pydantic-settings==2.11.0
 python-dotenv==1.1.1
+
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+redis==5.2.0
+alembic==1.14.0
+pytest-asyncio==0.24.0
