@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
 from app.config.database_settings import database_settings
 from app.core.database import Base
+from app.core.logger import logger
 from app.db import base  # noqa: F401
 
 # Alembic Config
@@ -48,6 +49,8 @@ async def run_migrations_online() -> None:
 
     await connectable.dispose()
 
+
+logger.info("Running Alembic migrations...")
 
 if context.is_offline_mode():
     run_migrations_offline()

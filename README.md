@@ -16,6 +16,7 @@ The application is fully containerized using **Docker** and **Docker Compose** w
 │   │   └── settings.py
 │   ├── core/
 │   │   ├── database.py
+│   │   ├── logger.py
 │   │   └── redis.py
 │   ├── db/
 │   │   └── base.py

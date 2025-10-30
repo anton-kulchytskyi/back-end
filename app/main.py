@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.core.logger import logger
 from app.routers import router
 
 app = FastAPI(title=settings.app.PROJECT_NAME)
@@ -16,6 +17,8 @@ app.add_middleware(
 )
 
 app.include_router(router)
+
+logger.info("Starting FastAPI application...")
 
 
 if __name__ == "__main__":
