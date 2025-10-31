@@ -1,6 +1,12 @@
 # Use the official lightweight Python image
 FROM python:3.13-slim
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    redis-tools \
+    && rm -rf /var/lib/apt/lists/*
+
 # Ensure output is sent straight to the terminal (no buffering)
 ENV PYTHONUNBUFFERED=1
 
