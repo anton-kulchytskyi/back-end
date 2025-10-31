@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 # --- Base Schemas ---
@@ -26,7 +26,6 @@ class UserSignIn(BaseModel):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     password: Optional[str] = None
-    is_active: Optional[bool] = None
 
 
 # --- 2. Response Models (Output) ---
@@ -35,8 +34,7 @@ class UserPublic(UserBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UsersList(BaseModel):

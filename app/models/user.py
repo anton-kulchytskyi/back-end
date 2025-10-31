@@ -1,20 +1,19 @@
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, func
+from sqlalchemy import Boolean, String
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.models.mixins import IDMixin, TimestampMixin
 
 
-class User(Base):
+class User(Base, IDMixin, TimestampMixin):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    full_name = Column(String(255), nullable=True)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
+    email: Mapped[str] = mapped_column(
+        String(255), unique=True, index=True, nullable=False
     )
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    def __repr__(self):
-        return f"<User id={self.id} email={self.email}>"
+    def __repr__(self) -> str:
+        return f"<User(id={self.id}, email={self.email}, name={self.name})>"
