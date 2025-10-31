@@ -1,48 +1,50 @@
 from datetime import datetime
-from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-# --- Base Schemas ---
-class UserBase(BaseModel):
+# --- 1. User schema (base) ---
+class User(BaseModel):
     email: EmailStr
-    full_name: Optional[str] = None
-    is_active: Optional[bool] = True
+    full_name: str = Field(..., min_length=1, max_length=100)
+    is_active: bool = True
 
 
-# --- 1. Request Models (Input) ---
-
-
-class UserCreate(UserBase):
-    password: str
-
-
-class UserSignIn(BaseModel):
+# --- 2. SignIn Request model ---
+class SignInRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=1)
 
 
-class UserUpdate(BaseModel):
-    full_name: Optional[str] = None
-    password: Optional[str] = None
+# --- 3. SignUp Request model ---
+class SignUpRequest(BaseModel):
+    email: EmailStr
+    full_name: str = Field(..., min_length=1, max_length=100)
+    password: str = Field(..., min_length=8, max_length=100)
 
 
-# --- 2. Response Models (Output) ---
-class UserPublic(UserBase):
+# --- 4. UserUpdate Request model ---
+class UserUpdateRequest(BaseModel):
+    full_name: str | None = Field(None, min_length=1, max_length=100)
+    password: str | None = Field(None, min_length=8, max_length=100)
+
+
+# --- 5. UsersList Response ---
+class UsersListResponse(BaseModel):
+    users: list["UserDetailResponse"]
+    total: int
+    page: int = 1
+    page_size: int = 10
+    total_pages: int
+
+
+# --- 6. UserDetail Response ---
+class UserDetailResponse(BaseModel):
     id: int
+    email: EmailStr
+    full_name: str
+    is_active: bool
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class UsersList(BaseModel):
-    users: list[UserPublic]
-    total: int
-
-
-# --- 3. Authentication Response ---
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
