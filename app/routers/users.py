@@ -23,6 +23,19 @@ async def get_users(
     page_size: Annotated[int, Query(ge=1, le=100)] = 10,
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Retrieve a list of all users.
+
+    This endpoint provides paginated access to all registered user accounts.
+
+    Args:
+        page: The page number to retrieve (starts at 1).
+        page_size: The number of items per page (max 100).
+        db: Database session dependency.
+
+    Returns:
+        UsersListResponse: A list of user details along with pagination metadata.
+    """
     try:
         skip = (page - 1) * page_size
         users, total = await user_service.get_all_users(db, skip=skip, limit=page_size)
@@ -48,6 +61,21 @@ async def get_users(
     "/{user_id}", response_model=UserDetailResponse, status_code=status.HTTP_200_OK
 )
 async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Retrieve a single user by ID.
+
+    Fetches the detailed information for a specific user ID.
+
+    Args:
+        user_id: The ID of the user to retrieve.
+        db: Database session dependency.
+
+    Raises:
+        HTTPException: 404 Not Found if the user does not exist.
+
+    Returns:
+        UserDetailResponse: The detailed information of the requested user.
+    """
     try:
         user = await user_service.get_user_by_id(db, user_id)
 
@@ -71,6 +99,21 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("", response_model=UserDetailResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: SignUpRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Register a new user (Sign Up).
+
+    Creates a new user account by hashing the provided password and saving the user details.
+
+    Args:
+        user_data: User registration data (email, full_name, password).
+        db: Database session dependency.
+
+    Raises:
+        HTTPException: 409 Conflict if a user with the given email already exists.
+
+    Returns:
+        UserDetailResponse: The details of the newly created user.
+    """
     try:
         # Check if user with email already exists
         existing_user = await user_service.get_user_by_email(db, user_data.email)
@@ -104,6 +147,23 @@ async def create_user(user_data: SignUpRequest, db: AsyncSession = Depends(get_d
 async def update_user(
     user_id: int, user_data: UserUpdateRequest, db: AsyncSession = Depends(get_db)
 ):
+    """
+    Update an existing user's details.
+
+    Allows modification of a user's full name and/or password. The password
+    is hashed if provided.
+
+    Args:
+        user_id: The ID of the user to update.
+        user_data: The update data (full_name and/or password).
+        db: Database session dependency.
+
+    Raises:
+        HTTPException: 404 Not Found if the user does not exist.
+
+    Returns:
+        UserDetailResponse: The updated user details.
+    """
     try:
         user = await user_service.get_user_by_id(db, user_id)
         if not user:
@@ -134,6 +194,21 @@ async def update_user(
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Delete a user account by ID.
+
+    Removes the user record from the database.
+
+    Args:
+        user_id: The ID of the user to delete.
+        db: Database session dependency.
+
+    Raises:
+        HTTPException: 404 Not Found if the user does not exist.
+
+    Returns:
+        None: Returns 204 No Content upon successful deletion.
+    """
     try:
         user = await user_service.get_user_by_id(db, user_id)
         if not user:

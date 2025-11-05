@@ -91,7 +91,7 @@ async def test_create_user(client: AsyncClient):
         "password": "password123",
     }
 
-    response = await client.post("/users", json=user_data)
+    response = await client.post("/auth/register", json=user_data)
 
     assert response.status_code == 201, response.text
     data = response.json()

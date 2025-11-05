@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logger import logger
+from app.core.security import hash_password, verify_password
 from app.models.user import User
 from app.schemas.user import SignUpRequest, UserUpdateRequest
 
@@ -69,10 +70,9 @@ class UserService:
             raise
 
     @staticmethod
-    async def create_user(
-        db: AsyncSession, user_data: SignUpRequest, hashed_password: str
-    ) -> User:
+    async def create_user(db: AsyncSession, user_data: SignUpRequest) -> User:
         try:
+            hashed_password = hash_password(user_data.password)
             user = User(
                 email=user_data.email,
                 full_name=user_data.full_name,
@@ -138,6 +138,34 @@ class UserService:
             await db.rollback()
             logger.error(f"Error deleting user with id={user.id}: {str(e)}")
             raise
+
+    @staticmethod
+    async def authenticate_user(
+        db: AsyncSession, email: str, password: str
+    ) -> User | None:
+        try:
+            # Get user by email
+            user = await UserService.get_user_by_email(db, email)
+
+            if not user:
+                logger.debug(
+                    f"Authentication failed: user with email {email} not found"
+                )
+                return None
+
+            # Verify password
+            if not verify_password(password, user.hashed_password):
+                logger.debug(
+                    f"Authentication failed: invalid password for user {email}"
+                )
+                return None
+
+            logger.info(f"User authenticated successfully: {email}")
+            return user
+
+        except Exception as e:
+            logger.error(f"Error authenticating user {email}: {str(e)}")
+            return None
 
 
 user_service = UserService()
