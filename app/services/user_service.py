@@ -1,143 +1,75 @@
-from typing import Optional
-
-from sqlalchemy import func, select
+from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logger import logger
+from app.core.security import hash_password
+from app.db.user_repository import user_repository
 from app.models.user import User
 from app.schemas.user import SignUpRequest, UserUpdateRequest
 
 
 class UserService:
     @staticmethod
-    async def get_all_users(
-        db: AsyncSession, skip: int = 0, limit: int = 100
-    ) -> tuple[list[User], int]:
-        try:
-            # Get total count
-            count_query = select(func.count(User.id))
-            count_result = await db.execute(count_query)
-            total = count_result.scalar_one()
-
-            # Get users with pagination
-            query = select(User).offset(skip).limit(limit)
-            result = await db.execute(query)
-            users = result.scalars().all()
-
-            logger.info(f"Retrieved {len(users)} users (total: {total})")
-            return list(users), total
-
-        except Exception as e:
-            logger.error(f"Error getting all users: {str(e)}")
-            raise
+    async def get_all_users(db: AsyncSession, skip: int = 0, limit: int = 100):
+        """Fetch users via repository."""
+        return await user_repository.get_all(db, skip, limit)
 
     @staticmethod
-    async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
-        try:
-            query = select(User).where(User.id == user_id)
-            result = await db.execute(query)
-            user = result.scalar_one_or_none()
-
-            if user:
-                logger.info(f"Retrieved user with id={user_id}")
-            else:
-                logger.warning(f"User with id={user_id} not found")
-
-            return user
-
-        except Exception as e:
-            logger.error(f"Error getting user by id={user_id}: {str(e)}")
-            raise
+    async def get_user_by_id(db: AsyncSession, user_id: int):
+        user = await user_repository.get_by_id(db, user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            )
+        return user
 
     @staticmethod
-    async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
-        try:
-            query = select(User).where(User.email == email)
-            result = await db.execute(query)
-            user = result.scalar_one_or_none()
-
-            if user:
-                logger.info(f"Retrieved user with email={email}")
-            else:
-                logger.warning(f"User with email={email} not found")
-
-            return user
-
-        except Exception as e:
-            logger.error(f"Error getting user by email={email}: {str(e)}")
-            raise
-
-    @staticmethod
-    async def create_user(
-        db: AsyncSession, user_data: SignUpRequest, hashed_password: str
-    ) -> User:
-        try:
-            user = User(
-                email=user_data.email,
-                full_name=user_data.full_name,
-                hashed_password=hashed_password,
+    async def register_user(db: AsyncSession, user_data: SignUpRequest) -> User:
+        """Register a new user."""
+        existing = await user_repository.get_by_email(db, user_data.email)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"User with email {user_data.email} already exists",
             )
 
-            db.add(user)
-            await db.commit()
-            await db.refresh(user)
+        hashed_password = hash_password(user_data.password)
+        user = User(
+            email=user_data.email,
+            full_name=user_data.full_name,
+            hashed_password=hashed_password,
+        )
 
-            logger.info(f"Created user with id={user.id}, email={user.email}")
-            return user
-
-        except IntegrityError as e:
-            await db.rollback()
-            logger.error(f"User with email={user_data.email} already exists")
-            raise ValueError(f"User with email {user_data.email} already exists") from e
-
-        except Exception as e:
-            await db.rollback()
-            logger.error(f"Error creating user: {str(e)}")
-            raise
+        try:
+            created_user = await user_repository.create(db, user)
+            logger.info(f"Created user: {created_user.email}")
+            return created_user
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="User already exists"
+            )
 
     @staticmethod
     async def update_user(
-        db: AsyncSession,
-        user: User,
-        user_data: UserUpdateRequest,
-        hashed_password: str | None = None,
+        db: AsyncSession, user: User, user_data: UserUpdateRequest
     ) -> User:
-        try:
-            update_data = user_data.model_dump(exclude_unset=True)
+        """Update existing user fields."""
+        if user_data.password:
+            user.hashed_password = hash_password(user_data.password)
 
-            for field, value in update_data.items():
-                if field == "password":
-                    continue
-                setattr(user, field, value)
+        update_data = user_data.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            if key != "password":
+                setattr(user, key, value)
 
-            if hashed_password:
-                user.hashed_password = hashed_password
-
-            await db.commit()
-            await db.refresh(user)
-
-            logger.info(f"Updated user with id={user.id}")
-            return user
-
-        except Exception as e:
-            await db.rollback()
-            logger.error(f"Error updating user with id={user.id}: {str(e)}")
-            raise
+        await user_repository.update(db, user)
+        return user
 
     @staticmethod
-    async def delete_user(db: AsyncSession, user: User) -> bool:
-        try:
-            await db.delete(user)
-            await db.commit()
-
-            logger.info(f"Deleted user with id={user.id}")
-            return True
-
-        except Exception as e:
-            await db.rollback()
-            logger.error(f"Error deleting user with id={user.id}: {str(e)}")
-            raise
+    async def delete_user(db: AsyncSession, user: User):
+        await user_repository.delete(db, user)
+        return True
 
 
 user_service = UserService()
