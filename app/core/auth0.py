@@ -117,12 +117,7 @@ def get_email_from_auth0_token(token: str) -> Optional[str]:
     try:
         payload = verify_auth0_token(token)
 
-        # Try different email claims
-        email = (
-            payload.get("email")
-            or payload.get("https://meduzzen-fastapi/email")  # Custom claim
-            or payload.get("sub")  # Fallback to subject if email format
-        )
+        email = payload.get("email")
 
         if email:
             logger.debug(f"Extracted email from Auth0 token: {email}")

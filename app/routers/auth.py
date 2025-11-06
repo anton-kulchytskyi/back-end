@@ -11,8 +11,10 @@ from fastapi.security import (  # ← Змінено
     HTTPBearer,
     OAuth2PasswordRequestForm,
 )
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth0 import Auth0Error, get_email_from_auth0_token, verify_auth0_token
 from app.core.database import get_db
 from app.core.logger import logger
 from app.core.security import create_access_token, decode_access_token
@@ -174,3 +176,68 @@ async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
     """
     logger.info(f"User info retrieved: {current_user.email}")
     return current_user
+
+
+class Auth0LoginRequest(BaseModel):
+    """Request model for Auth0 login"""
+
+    token: str  # Auth0 JWT token
+
+
+@router.post("/auth0/login")
+async def auth0_login(request: Auth0LoginRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Login with Auth0 token.
+
+    - **token**: Valid Auth0 JWT access token
+
+    Returns JWT access token for our application.
+    User will be created automatically if not exists.
+    """
+    try:
+        # Verify Auth0 token
+        try:
+            verify_auth0_token(request.token)
+        except Auth0Error as e:
+            logger.warning(f"Auth0 token verification failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid Auth0 token: {str(e)}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Extract email from token
+        email = get_email_from_auth0_token(request.token)
+        if not email:
+            logger.warning("No email found in Auth0 token")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email not found in Auth0 token",
+            )
+
+        # Check if user exists
+        user = await UserService.get_user_by_email(db, email)
+
+        if not user:
+            # User doesn't exist - will create in next subtask
+            logger.info(f"Auth0 user not found in database: {email}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found. Please register first.",
+            )
+
+        # Create access token for our application
+        access_token = create_access_token(data={"sub": str(user.id)})
+
+        logger.info(f"User logged in via Auth0: {user.email}")
+
+        return {"access_token": access_token, "token_type": "bearer"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error during Auth0 login: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Auth0 login failed",
+        )
