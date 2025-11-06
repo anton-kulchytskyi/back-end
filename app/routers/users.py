@@ -16,7 +16,7 @@ from app.services.user_service import user_service
 router = APIRouter()
 
 
-@router.get("", response_model=UsersListResponse, status_code=status.HTTP_200_OK)
+@router.get("", response_model=UsersListResponse)
 async def get_users(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 10,
@@ -35,30 +35,23 @@ async def get_users(
     Returns:
         UsersListResponse: A list of user details along with pagination metadata.
     """
+    skip = (page - 1) * page_size
     try:
-        skip = (page - 1) * page_size
-        users, total = await user_service.get_all_users(db, skip=skip, limit=page_size)
-
+        users, total = await user_service.get_all_users(db, skip, page_size)
         total_pages = (total + page_size - 1) // page_size
-
         return UsersListResponse(
-            users=[UserDetailResponse.model_validate(user) for user in users],
+            users=[UserDetailResponse.model_validate(u) for u in users],
             total=total,
             page=page,
             page_size=page_size,
             total_pages=total_pages,
         )
     except Exception as e:
-        logger.error(f"Error getting users: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve users",
-        )
+        logger.error(f"Error fetching users: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve users")
 
 
-@router.get(
-    "/{user_id}", response_model=UserDetailResponse, status_code=status.HTTP_200_OK
-)
+@router.get("/{user_id}", response_model=UserDetailResponse)
 async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
     """
     Retrieve a single user by ID.
@@ -75,25 +68,10 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
     Returns:
         UserDetailResponse: The detailed information of the requested user.
     """
-    try:
-        user = await user_service.get_user_by_id(db, user_id)
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with id={user_id} not found",
-            )
-
-        return UserDetailResponse.model_validate(user)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting user {user_id}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve user",
-        )
+    user = await user_service.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return UserDetailResponse.model_validate(user)
 
 
 @router.post("", response_model=UserDetailResponse, status_code=status.HTTP_201_CREATED)
@@ -113,31 +91,11 @@ async def register_user(user_data: SignUpRequest, db: AsyncSession = Depends(get
             - 409 if user with this email already exists
             - 500 if any unexpected error occurs
     """
-    try:
-        user = await user_service.register_user(db, user_data)
-        return UserDetailResponse.model_validate(user)
-
-    except HTTPException:
-        raise
-
-    except ValueError as e:
-        # Raised when user already exists
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(e),
-        )
-
-    except Exception as e:
-        logger.error(f"Error registering user: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to register user",
-        )
+    user = await user_service.register_user(db, user_data)
+    return UserDetailResponse.model_validate(user)
 
 
-@router.put(
-    "/{user_id}", response_model=UserDetailResponse, status_code=status.HTTP_200_OK
-)
+@router.put("/{user_id}", response_model=UserDetailResponse)
 async def update_user(
     user_id: int, user_data: UserUpdateRequest, db: AsyncSession = Depends(get_db)
 ):
@@ -158,26 +116,12 @@ async def update_user(
     Returns:
         UserDetailResponse: The updated user details.
     """
-    try:
-        user = await user_service.get_user_by_id(db, user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with id={user_id} not found",
-            )
+    user = await user_service.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-        updated_user = await user_service.update_user(db, user, user_data)
-
-        return UserDetailResponse.model_validate(updated_user)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error updating user {user_id}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update user",
-        )
+    updated_user = await user_service.update_user(db, user, user_data)
+    return UserDetailResponse.model_validate(updated_user)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -197,23 +141,9 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     Returns:
         None: Returns 204 No Content upon successful deletion.
     """
-    try:
-        user = await user_service.get_user_by_id(db, user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with id={user_id} not found",
-            )
+    user = await user_service.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-        await user_service.delete_user(db, user)
-
-        return None
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error deleting user {user_id}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete user",
-        )
+    await user_service.delete_user(db, user)
+    return None

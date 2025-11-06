@@ -7,7 +7,7 @@ from alembic import context
 from app.config.database_settings import database_settings
 from app.core.database import Base
 from app.core.logger import logger
-from app.db import base  # noqa: F401
+from app.db import base_models  # noqa: F401
 
 # Alembic Config
 config = context.config

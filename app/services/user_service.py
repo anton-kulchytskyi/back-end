@@ -10,66 +10,65 @@ from app.schemas.user import SignUpRequest, UserUpdateRequest
 
 
 class UserService:
-    @staticmethod
-    async def get_all_users(db: AsyncSession, skip: int = 0, limit: int = 100):
-        """Fetch users via repository."""
-        return await user_repository.get_all(db, skip, limit)
+    """Service layer for user operations."""
 
-    @staticmethod
-    async def get_user_by_id(db: AsyncSession, user_id: int):
-        user = await user_repository.get_by_id(db, user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
-        return user
-
-    @staticmethod
-    async def register_user(db: AsyncSession, user_data: SignUpRequest) -> User:
-        """Register a new user."""
-        existing = await user_repository.get_by_email(db, user_data.email)
-        if existing:
+    async def register_user(self, db: AsyncSession, user_data: SignUpRequest) -> User:
+        """Register new user with password hashing and duplicate check."""
+        existing_user = await user_repository.get_by_email(db, user_data.email)
+        if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"User with email {user_data.email} already exists",
             )
 
-        hashed_password = hash_password(user_data.password)
-        user = User(
-            email=user_data.email,
-            full_name=user_data.full_name,
-            hashed_password=hashed_password,
-        )
-
         try:
-            created_user = await user_repository.create(db, user)
-            logger.info(f"Created user: {created_user.email}")
-            return created_user
+            hashed_password = hash_password(user_data.password)
+            user = User(
+                email=user_data.email,
+                full_name=user_data.full_name,
+                hashed_password=hashed_password,
+            )
+            return await user_repository.create_one(db, user)
         except IntegrityError:
+            logger.error(f"User with email={user_data.email} already exists")
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="User already exists"
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"User with email {user_data.email} already exists",
+            )
+        except Exception as e:
+            logger.error(f"Error registering user: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create user",
             )
 
-    @staticmethod
+    async def get_all_users(self, db: AsyncSession, skip: int, limit: int):
+        """Return paginated list of users."""
+        return await user_repository.get_all(db, skip, limit)
+
+    async def get_user_by_id(self, db: AsyncSession, user_id: int) -> User | None:
+        """Return user by ID."""
+        return await user_repository.get_one(db, user_id)
+
     async def update_user(
-        db: AsyncSession, user: User, user_data: UserUpdateRequest
+        self, db: AsyncSession, user: User, user_data: UserUpdateRequest
     ) -> User:
-        """Update existing user fields."""
+        """Update user info and hash password if provided."""
+        update_data = user_data.model_dump(exclude_unset=True)
+
+        for field, value in update_data.items():
+            if field == "password":
+                continue
+            setattr(user, field, value)
+
         if user_data.password:
             user.hashed_password = hash_password(user_data.password)
 
-        update_data = user_data.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
-            if key != "password":
-                setattr(user, key, value)
+        return await user_repository.update_one(db, user)
 
-        await user_repository.update(db, user)
-        return user
-
-    @staticmethod
-    async def delete_user(db: AsyncSession, user: User):
-        await user_repository.delete(db, user)
-        return True
+    async def delete_user(self, db: AsyncSession, user: User):
+        """Delete user by ID."""
+        await user_repository.delete_one(db, user)
 
 
 user_service = UserService()
