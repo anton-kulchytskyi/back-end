@@ -1,108 +1,76 @@
-from typing import Optional
-
-from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import (
+    ServiceException,
+    UserAlreadyExistsException,
+    UserNotFoundException,
+)
 from app.core.logger import logger
 from app.core.security import hash_password, verify_password
+from app.db.user_repository import user_repository
 from app.models.user import User
 from app.schemas.user import SignUpRequest, UserUpdateRequest
 
 
 class UserService:
-    @staticmethod
-    async def get_all_users(
-        db: AsyncSession, skip: int = 0, limit: int = 100
-    ) -> tuple[list[User], int]:
+    """Service layer for user operations."""
+
+    async def register_user(self, db: AsyncSession, user_data: SignUpRequest) -> User:
+        """Register new user with password hashing and duplicate check."""
         try:
-            # Get total count
-            count_query = select(func.count(User.id))
-            count_result = await db.execute(count_query)
-            total = count_result.scalar_one()
+            existing_user = await user_repository.get_by_email(db, user_data.email)
+            if existing_user:
+                raise UserAlreadyExistsException(user_data.email)
 
-            # Get users with pagination
-            query = select(User).offset(skip).limit(limit)
-            result = await db.execute(query)
-            users = result.scalars().all()
-
-            logger.info(f"Retrieved {len(users)} users (total: {total})")
-            return list(users), total
-
-        except Exception as e:
-            logger.error(f"Error getting all users: {str(e)}")
-            raise
-
-    @staticmethod
-    async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
-        try:
-            query = select(User).where(User.id == user_id)
-            result = await db.execute(query)
-            user = result.scalar_one_or_none()
-
-            if user:
-                logger.info(f"Retrieved user with id={user_id}")
-            else:
-                logger.warning(f"User with id={user_id} not found")
-
-            return user
-
-        except Exception as e:
-            logger.error(f"Error getting user by id={user_id}: {str(e)}")
-            raise
-
-    @staticmethod
-    async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
-        try:
-            query = select(User).where(User.email == email)
-            result = await db.execute(query)
-            user = result.scalar_one_or_none()
-
-            if user:
-                logger.info(f"Retrieved user with email={email}")
-            else:
-                logger.warning(f"User with email={email} not found")
-
-            return user
-
-        except Exception as e:
-            logger.error(f"Error getting user by email={email}: {str(e)}")
-            raise
-
-    @staticmethod
-    async def create_user(db: AsyncSession, user_data: SignUpRequest) -> User:
-        try:
             hashed_password = hash_password(user_data.password)
             user = User(
                 email=user_data.email,
                 full_name=user_data.full_name,
                 hashed_password=hashed_password,
             )
+            return await user_repository.create_one(db, user)
 
-            db.add(user)
-            await db.commit()
-            await db.refresh(user)
-
-            logger.info(f"Created user with id={user.id}, email={user.email}")
-            return user
-
-        except IntegrityError as e:
+        except IntegrityError:
             await db.rollback()
-            logger.error(f"User with email={user_data.email} already exists")
-            raise ValueError(f"User with email {user_data.email} already exists") from e
+            logger.error(
+                f"User with email={user_data.email} already exists (IntegrityError)"
+            )
+            raise UserAlreadyExistsException(user_data.email)
+
+        except UserAlreadyExistsException:
+            raise
 
         except Exception as e:
             await db.rollback()
-            logger.error(f"Error creating user: {str(e)}")
-            raise
+            logger.error(f"Error registering user: {str(e)}")
+            raise ServiceException("Failed to create user")
 
-    @staticmethod
+    async def get_all_users(self, db: AsyncSession, skip: int, limit: int):
+        """Return paginated list of users."""
+        try:
+            return await user_repository.get_all(db, skip, limit)
+        except Exception as e:
+            logger.error(f"Error fetching users: {e}")
+            raise ServiceException("Failed to retrieve users")
+
+    async def get_user_by_id(self, db: AsyncSession, user_id: int) -> User:
+        """Return user by ID or raise if not found."""
+        try:
+            user = await user_repository.get_one(db, user_id)
+            if not user:
+                raise UserNotFoundException(user_id)
+            return user
+        except UserNotFoundException:
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error retrieving user by id={user_id}: {str(e)}")
+            raise ServiceException("Error fetching user data")
+
     async def update_user(
-        db: AsyncSession,
-        user: User,
-        user_data: UserUpdateRequest,
-        hashed_password: str | None = None,
+        self, db: AsyncSession, user: User, user_data: UserUpdateRequest
     ) -> User:
+        """Update user info and hash password if provided."""
         try:
             update_data = user_data.model_dump(exclude_unset=True)
 
@@ -111,35 +79,25 @@ class UserService:
                     continue
                 setattr(user, field, value)
 
-            if hashed_password:
-                user.hashed_password = hashed_password
+            if user_data.password:
+                user.hashed_password = hash_password(user_data.password)
 
-            await db.commit()
-            await db.refresh(user)
-
-            logger.info(f"Updated user with id={user.id}")
-            return user
+            return await user_repository.update_one(db, user)
 
         except Exception as e:
             await db.rollback()
-            logger.error(f"Error updating user with id={user.id}: {str(e)}")
-            raise
+            logger.error(f"Error updating user {user.id}: {str(e)}")
+            raise ServiceException("Failed to update user")
 
-    @staticmethod
-    async def delete_user(db: AsyncSession, user: User) -> bool:
+    async def delete_user(self, db: AsyncSession, user: User):
+        """Delete user by ID."""
         try:
-            await db.delete(user)
-            await db.commit()
-
-            logger.info(f"Deleted user with id={user.id}")
-            return True
-
+            await user_repository.delete_one(db, user)
         except Exception as e:
             await db.rollback()
-            logger.error(f"Error deleting user with id={user.id}: {str(e)}")
-            raise
+            logger.error(f"Error deleting user {user.id}: {str(e)}")
+            raise ServiceException("Failed to delete user")
 
-    @staticmethod
     async def authenticate_user(
         db: AsyncSession, email: str, password: str
     ) -> User | None:
