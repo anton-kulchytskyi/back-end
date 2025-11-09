@@ -7,7 +7,7 @@ from app.core.exceptions import (
     UserNotFoundException,
 )
 from app.core.logger import logger
-from app.core.security import hash_password, verify_password
+from app.core.security import hash_password
 from app.db.user_repository import user_repository
 from app.models.user import User
 from app.schemas.user import SignUpRequest, UserUpdateRequest
@@ -67,6 +67,14 @@ class UserService:
             logger.error(f"Unexpected error retrieving user by id={user_id}: {str(e)}")
             raise ServiceException("Error fetching user data")
 
+    async def get_user_by_email(self, db: AsyncSession, email: str) -> User | None:
+        """Return user by email or None if not found."""
+        try:
+            return await user_repository.get_by_email(db, email)
+        except Exception as e:
+            logger.error(f"Error fetching user by email={email}: {str(e)}")
+            raise ServiceException("Error fetching user data")
+
     async def update_user(
         self, db: AsyncSession, user: User, user_data: UserUpdateRequest
     ) -> User:
@@ -97,33 +105,6 @@ class UserService:
             await db.rollback()
             logger.error(f"Error deleting user {user.id}: {str(e)}")
             raise ServiceException("Failed to delete user")
-
-    async def authenticate_user(
-        db: AsyncSession, email: str, password: str
-    ) -> User | None:
-        try:
-            # Get user by email
-            user = await UserService.get_user_by_email(db, email)
-
-            if not user:
-                logger.debug(
-                    f"Authentication failed: user with email {email} not found"
-                )
-                return None
-
-            # Verify password
-            if not verify_password(password, user.hashed_password):
-                logger.debug(
-                    f"Authentication failed: invalid password for user {email}"
-                )
-                return None
-
-            logger.info(f"User authenticated successfully: {email}")
-            return user
-
-        except Exception as e:
-            logger.error(f"Error authenticating user {email}: {str(e)}")
-            return None
 
 
 user_service = UserService()
