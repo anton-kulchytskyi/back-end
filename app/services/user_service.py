@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import (
+    PermissionDeniedException,
     ServiceException,
     UserAlreadyExistsException,
     UserNotFoundException,
@@ -98,10 +99,20 @@ class UserService:
             raise ServiceException("Error fetching user data")
 
     async def update_user(
-        self, db: AsyncSession, user: User, user_data: UserUpdateRequest
+        self,
+        db: AsyncSession,
+        user: User,
+        user_data: UserUpdateRequest,
+        current_user_id: int,
     ) -> User:
-        """Update user info and hash password if provided."""
+        """Update user info and hash password if provided. Users can only update their own profile."""
         try:
+            # Permission check: user can only update their own profile
+            if current_user_id != user.id:
+                raise PermissionDeniedException(
+                    detail="You can only edit your own profile"
+                )
+
             update_data = user_data.model_dump(exclude_unset=True)
 
             for field, value in update_data.items():
@@ -114,15 +125,28 @@ class UserService:
 
             return await user_repository.update_one(db, user)
 
+        except PermissionDeniedException:
+            raise
+
         except Exception as e:
             await db.rollback()
             logger.error(f"Error updating user {user.id}: {str(e)}")
             raise ServiceException("Failed to update user")
 
-    async def delete_user(self, db: AsyncSession, user: User):
-        """Delete user by ID."""
+    async def delete_user(self, db: AsyncSession, user: User, current_user_id: int):
+        """Delete user by ID. Users can only delete their own profile."""
         try:
+            # Permission check: user can only delete their own profile
+            if current_user_id != user.id:
+                raise PermissionDeniedException(
+                    detail="You can only delete your own profile"
+                )
+
             await user_repository.delete_one(db, user)
+
+        except PermissionDeniedException:
+            raise
+
         except Exception as e:
             await db.rollback()
             logger.error(f"Error deleting user {user.id}: {str(e)}")

@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
+from app.models.user import User
 from app.schemas.user import (
     SignUpRequest,
     UserDetailResponse,
@@ -71,12 +73,13 @@ async def update_user(
     user_data: UserUpdateRequest,
     db: AsyncSession = Depends(get_db),
     service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_user),
 ):
     """
-    Update user info.
+    Update user info. Users can only update their own profile.
     """
     user = await service.get_user_by_id(db, user_id)
-    updated_user = await service.update_user(db, user, user_data)
+    updated_user = await service.update_user(db, user, user_data, current_user.id)
     return UserDetailResponse.model_validate(updated_user)
 
 
@@ -85,10 +88,11 @@ async def delete_user(
     user_id: int,
     db: AsyncSession = Depends(get_db),
     service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_user),
 ):
     """
-    Delete user by ID.
+    Delete user by ID. Users can only delete their own profile.
     """
     user = await service.get_user_by_id(db, user_id)
-    await service.delete_user(db, user)
+    await service.delete_user(db, user, current_user.id)
     return None
