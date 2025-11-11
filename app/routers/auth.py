@@ -1,8 +1,3 @@
-"""
-Authentication and authorization endpoints.
-Handles user login, registration, and token management.
-"""
-
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -12,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.auth import Auth0LoginRequest, TokenResponse
+from app.schemas.auth import RefreshTokenRequest, TokenResponse
 from app.schemas.user import SignUpRequest, UserDetailResponse
 from app.services.auth_service import AuthService
 from app.services.deps import get_auth_service, get_user_service
@@ -62,24 +57,18 @@ async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
     """
     Get current authenticated user information.
 
-    Requires valid JWT token in Authorization header.
+    Requires valid JWT token or Auth0 token in Authorization header.
     """
     return current_user
 
 
-@router.post("/auth0/login", response_model=TokenResponse)
-async def auth0_login(
-    request: Auth0LoginRequest,
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_token(
+    request: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db),
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """
-    Login with Auth0 token.
-
-    - **token**: Valid Auth0 JWT access token
-
-    Returns JWT access token for our application.
-    User will be created automatically if not exists.
+    Refresh access token using a valid refresh token.
     """
-    result = await auth_service.authenticate_with_auth0(db, request.token)
-    return TokenResponse(**result)
+    return await auth_service.refresh_access_token(db, request.refresh_token)

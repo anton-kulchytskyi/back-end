@@ -158,3 +158,65 @@ async def test_get_me_expired_token(client: AsyncClient, test_user: User):
     )
 
     assert response.status_code == 401
+
+
+# ==================== REFRESH TOKEN TESTS ====================
+
+
+@pytest.mark.asyncio
+async def test_refresh_success(client: AsyncClient, test_user: User):
+    login_data = {"username": test_user.email, "password": "testpassword123"}
+    login_response = await client.post("/auth/login", data=login_data)
+    assert login_response.status_code == 200
+    tokens = login_response.json()
+    refresh_token = tokens["refresh_token"]
+
+    refresh_response = await client.post(
+        "/auth/refresh",
+        json={"refresh_token": refresh_token},
+    )
+
+    assert refresh_response.status_code == 200, refresh_response.text
+    data = refresh_response.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["token_type"] == "bearer"
+    assert data["access_token"] != tokens["access_token"]
+    assert data["refresh_token"] != tokens["refresh_token"]
+
+
+@pytest.mark.asyncio
+async def test_refresh_invalid_token(client: AsyncClient):
+    response = await client.post(
+        "/auth/refresh", json={"refresh_token": "invalid_token_here"}
+    )
+    assert response.status_code == 401
+    assert "Invalid" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_refresh_expired_token(client: AsyncClient, test_user: User):
+    from datetime import timedelta
+
+    from app.core.security import create_refresh_token
+
+    expired_refresh = create_refresh_token(
+        data={"sub": str(test_user.id)}, expires_delta=timedelta(seconds=-1)
+    )
+
+    response = await client.post(
+        "/auth/refresh", json={"refresh_token": expired_refresh}
+    )
+    assert response.status_code == 401
+    assert "expired" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_refresh_user_not_found(client: AsyncClient):
+    from app.core.security import create_refresh_token
+
+    fake_refresh = create_refresh_token(data={"sub": "99999"})
+
+    response = await client.post("/auth/refresh", json={"refresh_token": fake_refresh})
+    assert response.status_code == 401
+    assert "User not found" in response.json()["detail"]
