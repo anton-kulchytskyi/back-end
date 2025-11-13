@@ -53,13 +53,11 @@ class UserService:
             return created_user
 
         except IntegrityError:
-            await db.rollback()
             logger.error(f"User with email={email} already exists (IntegrityError)")
             raise UserAlreadyExistsException(email)
         except UserAlreadyExistsException:
             raise
         except Exception as e:
-            await db.rollback()
             logger.error(f"Error creating user {email}: {str(e)}")
             raise ServiceException("Failed to create user")
 
@@ -129,7 +127,6 @@ class UserService:
             raise
 
         except Exception as e:
-            await db.rollback()
             logger.error(f"Error updating user {user.id}: {str(e)}")
             raise ServiceException("Failed to update user")
 
@@ -148,7 +145,6 @@ class UserService:
             raise
 
         except Exception as e:
-            await db.rollback()
             logger.error(f"Error deleting user {user.id}: {str(e)}")
             raise ServiceException("Failed to delete user")
 

@@ -67,32 +67,30 @@ async def register_user(
     return UserDetailResponse.model_validate(user)
 
 
-@router.put("/{user_id}", response_model=UserDetailResponse)
+@router.put("/me", response_model=UserDetailResponse)
 async def update_user(
-    user_id: int,
     user_data: UserUpdateRequest,
     db: AsyncSession = Depends(get_db),
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Update user info. Users can only update their own profile.
+    Update current user's profile. Users can only update their own profile.
     """
-    user = await service.get_user_by_id(db, user_id)
+    user = await service.get_user_by_id(db, current_user.id)
     updated_user = await service.update_user(db, user, user_data, current_user.id)
     return UserDetailResponse.model_validate(updated_user)
 
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
-    user_id: int,
     db: AsyncSession = Depends(get_db),
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Delete user by ID. Users can only delete their own profile.
+    Delete current user's profile. Users can only delete their own profile.
     """
-    user = await service.get_user_by_id(db, user_id)
+    user = await service.get_user_by_id(db, current_user.id)
     await service.delete_user(db, user, current_user.id)
     return None
