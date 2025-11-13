@@ -1,3 +1,5 @@
+import secrets
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,35 +18,55 @@ from app.schemas.user import SignUpRequest, UserUpdateRequest
 class UserService:
     """Service layer for user operations."""
 
-    async def register_user(self, db: AsyncSession, user_data: SignUpRequest) -> User:
-        """Register new user with password hashing and duplicate check."""
+    async def create_user(
+        self,
+        db: AsyncSession,
+        email: str,
+        full_name: str | None = None,
+        password: str | None = None,
+        is_external: bool = False,
+    ) -> User:
+        """
+        Create a new user (supports both manual and external creation).
+        If password is not provided, generates a random one (e.g. for Auth0 users).
+        """
         try:
-            existing_user = await user_repository.get_by_email(db, user_data.email)
+            existing_user = await user_repository.get_by_email(db, email)
             if existing_user:
-                raise UserAlreadyExistsException(user_data.email)
+                raise UserAlreadyExistsException(email)
 
-            hashed_password = hash_password(user_data.password)
+            if not password:
+                password = secrets.token_urlsafe(32)
+
+            hashed_password = hash_password(password)
             user = User(
-                email=user_data.email,
-                full_name=user_data.full_name,
+                email=email,
+                full_name=full_name or email.split("@")[0].capitalize(),
                 hashed_password=hashed_password,
             )
-            return await user_repository.create_one(db, user)
+            created_user = await user_repository.create_one(db, user)
+
+            logger.info(
+                f"Created new {'Auth0' if is_external else 'local'} user: {email}"
+            )
+            return created_user
 
         except IntegrityError:
             await db.rollback()
-            logger.error(
-                f"User with email={user_data.email} already exists (IntegrityError)"
-            )
-            raise UserAlreadyExistsException(user_data.email)
-
+            logger.error(f"User with email={email} already exists (IntegrityError)")
+            raise UserAlreadyExistsException(email)
         except UserAlreadyExistsException:
             raise
-
         except Exception as e:
             await db.rollback()
-            logger.error(f"Error registering user: {str(e)}")
+            logger.error(f"Error creating user {email}: {str(e)}")
             raise ServiceException("Failed to create user")
+
+    async def register_user(self, db: AsyncSession, user_data: SignUpRequest) -> User:
+        """Register new user."""
+        return await self.create_user(
+            db, user_data.email, user_data.full_name, user_data.password
+        )
 
     async def get_all_users(self, db: AsyncSession, skip: int, limit: int):
         """Return paginated list of users."""
@@ -67,6 +89,14 @@ class UserService:
             logger.error(f"Unexpected error retrieving user by id={user_id}: {str(e)}")
             raise ServiceException("Error fetching user data")
 
+    async def get_user_by_email(self, db: AsyncSession, email: str) -> User | None:
+        """Return user by email or None if not found."""
+        try:
+            return await user_repository.get_by_email(db, email)
+        except Exception as e:
+            logger.error(f"Error fetching user by email={email}: {str(e)}")
+            raise ServiceException("Error fetching user data")
+
     async def update_user(
         self, db: AsyncSession, user: User, user_data: UserUpdateRequest
     ) -> User:
@@ -83,6 +113,7 @@ class UserService:
                 user.hashed_password = hash_password(user_data.password)
 
             return await user_repository.update_one(db, user)
+
         except Exception as e:
             await db.rollback()
             logger.error(f"Error updating user {user.id}: {str(e)}")

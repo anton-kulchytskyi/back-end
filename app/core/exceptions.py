@@ -3,15 +3,12 @@ from fastapi import HTTPException, status
 
 # --- Base project exceptions --- #
 class BaseAppException(HTTPException):
-    """Base class for all custom project exceptions."""
-
     def __init__(self, status_code: int, detail: str):
         super().__init__(status_code=status_code, detail=detail)
 
 
+# --- Internal service exception --- #
 class ServiceException(BaseAppException):
-    """Generic internal service exception (500)."""
-
     def __init__(self, detail: str = "Internal server error"):
         super().__init__(status.HTTP_500_INTERNAL_SERVER_ERROR, detail)
 
@@ -29,3 +26,13 @@ class UserAlreadyExistsException(BaseAppException):
             status.HTTP_409_CONFLICT,
             f"User with email {email} already exists",
         )
+
+
+# --- Authentication exceptions --- #
+class UnauthorizedException(BaseAppException):
+    def __init__(self, detail: str = "Could not validate credentials"):
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=detail,
+        )
+        self.headers = {"WWW-Authenticate": "Bearer"}

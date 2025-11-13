@@ -2,9 +2,16 @@
 
 ## 📁 Project Overview
 
-This project is a basic **FastAPI** setup following best practices.
-It includes an organized module structure (`config`, `core`, `db`, `models`, `routers`, `schemas`, `services`, `utils`) and a simple **health check endpoint** for testing.
+This is a **production-ready FastAPI backend** with modern authentication, database integration, and scalable architecture.
 The application is fully containerized using **Docker** and **Docker Compose** with **PostgreSQL** and **Redis** databases.
+
+### ✨ Key Features
+
+- **🔐 Dual Authentication System**
+- **💾 Database Integration**
+- **🏗️ Clean Architecture**
+- **🧪 Comprehensive Testing**
+- **🐳 Full Containerization**
 
 -----
 
