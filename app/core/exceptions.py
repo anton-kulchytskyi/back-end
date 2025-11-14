@@ -36,3 +36,14 @@ class UnauthorizedException(BaseAppException):
             detail=detail,
         )
         self.headers = {"WWW-Authenticate": "Bearer"}
+
+
+# --- Permission exceptions --- #
+class PermissionDeniedException(HTTPException):
+    def __init__(
+        self, detail: str = "You don't have permission to perform this action"
+    ):
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=detail,
+        )
