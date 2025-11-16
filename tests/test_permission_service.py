@@ -3,6 +3,7 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import PermissionDeniedException
+from app.enums.role import Role
 from app.models.company import Company
 from app.models.company_member import CompanyMember
 from app.models.user import User
@@ -43,7 +44,7 @@ async def owner_membership(
     db_session: AsyncSession, test_company: Company, owner_user: User
 ):
     member = CompanyMember(
-        company_id=test_company.id, user_id=owner_user.id, role="owner"
+        company_id=test_company.id, user_id=owner_user.id, role=Role.OWNER
     )
     db_session.add(member)
     await db_session.commit()

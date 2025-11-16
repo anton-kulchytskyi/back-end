@@ -3,6 +3,7 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import PermissionDeniedException, ServiceException
+from app.enums.role import Role
 from app.models.company import Company
 from app.models.user import User
 from app.schemas.company import CompanyCreateRequest, CompanyUpdateRequest
@@ -59,7 +60,7 @@ async def test_create_company(db_session: AsyncSession, owner: User):
         db_session, company.id, owner.id
     )
     assert member is not None
-    assert member.role == "owner"
+    assert member.role == Role.OWNER
 
 
 @pytest.mark.asyncio

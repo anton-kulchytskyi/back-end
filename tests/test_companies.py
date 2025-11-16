@@ -198,7 +198,7 @@ async def test_delete_company_owner(client: AsyncClient, test_user_token: str):
     assert response.status_code == 204
 
     get_resp = await client.get(f"/companies/{company_id}")
-    assert get_resp.status_code == 500  # Company not found
+    assert get_resp.status_code == 500
 
 
 @pytest.mark.asyncio

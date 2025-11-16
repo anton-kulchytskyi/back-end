@@ -9,6 +9,7 @@ sqlalchemy[asyncio]==2.0.36
 asyncpg==0.30.0
 alembic==1.14.0
 redis==5.2.0
+alembic-postgresql-enum==1.8.0
 
 # Security & Auth
 passlib==1.7.4

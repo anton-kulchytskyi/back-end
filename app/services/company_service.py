@@ -4,6 +4,7 @@ from app.core.exceptions import PermissionDeniedException, ServiceException
 from app.core.logger import logger
 from app.db.company_member_repository import company_member_repository
 from app.db.company_repository import company_repository
+from app.enums.role import Role
 from app.models.company import Company
 from app.models.company_member import CompanyMember
 from app.schemas.company import CompanyCreateRequest, CompanyUpdateRequest
@@ -29,7 +30,7 @@ class CompanyService:
             created_company = await company_repository.create_one(db, company)
 
             member = CompanyMember(
-                company_id=created_company.id, user_id=owner_id, role="owner"
+                company_id=created_company.id, user_id=owner_id, role=Role.OWNER
             )
             await company_member_repository.create_one(db, member)
 

@@ -1,5 +1,6 @@
 from logging.config import fileConfig
 
+import alembic_postgresql_enum  # noqa: F401
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
 

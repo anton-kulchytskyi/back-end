@@ -1,9 +1,11 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.enums.role import Role
 from app.models.mixins import IDMixin, TimestampMixin
 
 if TYPE_CHECKING:
@@ -22,8 +24,15 @@ class CompanyMember(IDMixin, TimestampMixin, Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    role: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="member", index=True
+    role: Mapped[Role] = mapped_column(
+        SQLEnum(
+            Role,
+            name="role_enum",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        default="member",
+        index=True,
     )
     company: Mapped["Company"] = relationship("Company", back_populates="members")
     user: Mapped["User"] = relationship("User", back_populates="company_memberships")

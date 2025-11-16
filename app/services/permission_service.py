@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import PermissionDeniedException
 from app.core.logger import logger
 from app.db.company_member_repository import company_member_repository
+from app.enums.role import Role
 
 
 class PermissionService:
@@ -24,7 +25,7 @@ class PermissionService:
         Require user to be owner of the company.
         """
         role = await self.get_role(db, company_id, user_id)
-        if role != "owner":
+        if role != Role.OWNER:
             logger.warning(
                 f"Permission denied: User {user_id} (role={role}) tried to perform owner action on company {company_id}"
             )
@@ -41,7 +42,7 @@ class PermissionService:
         For BE #10 when admin role is added.
         """
         role = await self.get_role(db, company_id, user_id)
-        if role not in ("admin", "owner"):
+        if role not in (Role.ADMIN, Role.OWNER):
             logger.warning(
                 f"Permission denied: User {user_id} (role={role}) tried to perform admin action on company {company_id}"
             )
