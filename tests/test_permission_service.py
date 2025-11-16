@@ -1,0 +1,140 @@
+import pytest
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.exceptions import PermissionDeniedException
+from app.models.company import Company
+from app.models.company_member import CompanyMember
+from app.models.user import User
+from app.services.permission_service import permission_service
+
+
+@pytest_asyncio.fixture
+async def test_company(db_session: AsyncSession):
+    company = Company(
+        name="Test Company", description="Test", owner_id=1, is_visible=True
+    )
+    db_session.add(company)
+    await db_session.commit()
+    await db_session.refresh(company)
+    return company
+
+
+@pytest_asyncio.fixture
+async def owner_user(db_session: AsyncSession):
+    user = User(email="owner@test.com", full_name="Owner", hashed_password="hash")
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def regular_user(db_session: AsyncSession):
+    user = User(email="user@test.com", full_name="User", hashed_password="hash")
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def owner_membership(
+    db_session: AsyncSession, test_company: Company, owner_user: User
+):
+    member = CompanyMember(
+        company_id=test_company.id, user_id=owner_user.id, role="owner"
+    )
+    db_session.add(member)
+    await db_session.commit()
+    return member
+
+
+@pytest.mark.asyncio
+async def test_get_role_owner(
+    db_session: AsyncSession,
+    test_company: Company,
+    owner_user: User,
+    owner_membership: CompanyMember,
+):
+    role = await permission_service.get_role(db_session, test_company.id, owner_user.id)
+    assert role == "owner"
+
+
+@pytest.mark.asyncio
+async def test_get_role_no_membership(
+    db_session: AsyncSession, test_company: Company, regular_user: User
+):
+    role = await permission_service.get_role(
+        db_session, test_company.id, regular_user.id
+    )
+    assert role is None
+
+
+@pytest.mark.asyncio
+async def test_require_owner_success(
+    db_session: AsyncSession,
+    test_company: Company,
+    owner_user: User,
+    owner_membership: CompanyMember,
+):
+    await permission_service.require_owner(db_session, test_company.id, owner_user.id)
+
+
+@pytest.mark.asyncio
+async def test_require_owner_fails_for_non_owner(
+    db_session: AsyncSession, test_company: Company, regular_user: User
+):
+    with pytest.raises(
+        PermissionDeniedException,
+        match="Only the company owner can perform this action",
+    ):
+        await permission_service.require_owner(
+            db_session, test_company.id, regular_user.id
+        )
+
+
+@pytest.mark.asyncio
+async def test_require_admin_success_for_owner(
+    db_session: AsyncSession,
+    test_company: Company,
+    owner_user: User,
+    owner_membership: CompanyMember,
+):
+    await permission_service.require_admin(db_session, test_company.id, owner_user.id)
+
+
+@pytest.mark.asyncio
+async def test_require_admin_fails_for_regular_user(
+    db_session: AsyncSession, test_company: Company, regular_user: User
+):
+    with pytest.raises(
+        PermissionDeniedException,
+        match="Only company admin or owner can perform this action",
+    ):
+        await permission_service.require_admin(
+            db_session, test_company.id, regular_user.id
+        )
+
+
+@pytest.mark.asyncio
+async def test_require_member_fails_for_non_member(
+    db_session: AsyncSession, test_company: Company, regular_user: User
+):
+    with pytest.raises(
+        PermissionDeniedException,
+        match="You must be a company member to perform this action",
+    ):
+        await permission_service.require_member(
+            db_session, test_company.id, regular_user.id
+        )
+
+
+@pytest.mark.asyncio
+async def test_require_member_success_for_owner(
+    db_session: AsyncSession,
+    test_company: Company,
+    owner_user: User,
+    owner_membership: CompanyMember,
+):
+    await permission_service.require_member(db_session, test_company.id, owner_user.id)

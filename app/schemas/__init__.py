@@ -1,3 +1,10 @@
+from app.schemas.auth import RefreshTokenRequest, TokenResponse
+from app.schemas.company import (
+    CompaniesListResponse,
+    CompanyCreateRequest,
+    CompanyResponse,
+    CompanyUpdateRequest,
+)
 from app.schemas.user import (
     SignInRequest,
     SignUpRequest,
@@ -8,10 +15,19 @@ from app.schemas.user import (
 )
 
 __all__ = [
+    # Auth schemas
+    "TokenResponse",
+    "RefreshTokenRequest",
+    # User schemas
     "User",
     "SignInRequest",
     "SignUpRequest",
     "UserUpdateRequest",
-    "UsersListResponse",
     "UserDetailResponse",
+    "UsersListResponse",
+    # Company schemas
+    "CompanyCreateRequest",
+    "CompanyUpdateRequest",
+    "CompanyResponse",
+    "CompaniesListResponse",
 ]
