@@ -1,6 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import PermissionDeniedException, ServiceException
+from app.core.exceptions import (
+    ConflictException,
+    PermissionDeniedException,
+    ServiceException,
+)
 from app.core.logger import logger
 from app.db.company_member_repository import company_member_repository
 from app.db.company_repository import company_repository
@@ -63,10 +67,10 @@ class CompanyService:
         try:
             company = await company_repository.get_one(db, company_id)
             if not company:
-                raise ServiceException(f"Company with ID {company_id} not found")
+                raise ConflictException(f"Company with ID {company_id} not found")
             return company
 
-        except ServiceException:
+        except ConflictException:
             raise
         except Exception as e:
             logger.error(f"Error fetching company {company_id}: {str(e)}")

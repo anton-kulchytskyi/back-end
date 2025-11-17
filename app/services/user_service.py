@@ -4,10 +4,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import (
+    ConflictException,
+    NotFoundException,
     PermissionDeniedException,
     ServiceException,
-    UserAlreadyExistsException,
-    UserNotFoundException,
 )
 from app.core.logger import logger
 from app.core.security import hash_password
@@ -34,7 +34,7 @@ class UserService:
         try:
             existing_user = await user_repository.get_by_email(db, email)
             if existing_user:
-                raise UserAlreadyExistsException(email)
+                raise ConflictException(f"User with email {email} already exists")
 
             if not password:
                 password = secrets.token_urlsafe(32)
@@ -54,8 +54,8 @@ class UserService:
 
         except IntegrityError:
             logger.error(f"User with email={email} already exists (IntegrityError)")
-            raise UserAlreadyExistsException(email)
-        except UserAlreadyExistsException:
+            raise ConflictException(f"User with email {email} already exists")
+        except ConflictException:
             raise
         except Exception as e:
             logger.error(f"Error creating user {email}: {str(e)}")
@@ -80,9 +80,9 @@ class UserService:
         try:
             user = await user_repository.get_one(db, user_id)
             if not user:
-                raise UserNotFoundException(user_id)
+                raise NotFoundException(f"User with id={user_id} not found")
             return user
-        except UserNotFoundException:
+        except NotFoundException:
             raise
         except Exception as e:
             logger.error(f"Unexpected error retrieving user by id={user_id}: {str(e)}")

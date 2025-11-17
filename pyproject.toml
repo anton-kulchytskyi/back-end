@@ -8,4 +8,7 @@ profile = "black"
 [tool.ruff]
 line-length = 88
 target-version = "py313"
+
+[tool.ruff.lint]
 extend-select = ["I"]
+
