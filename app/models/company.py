@@ -8,6 +8,8 @@ from app.models.mixins import IDMixin, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.company_member import CompanyMember
+    from app.models.invitation import Invitation
+    from app.models.request import Request
     from app.models.user import User
 
 
@@ -25,6 +27,14 @@ class Company(IDMixin, TimestampMixin, Base):
     owner: Mapped["User"] = relationship("User", back_populates="owned_companies")
     members: Mapped[list["CompanyMember"]] = relationship(
         "CompanyMember", back_populates="company", cascade="all, delete-orphan"
+    )
+    invitations: Mapped[list["Invitation"]] = relationship(
+        "Invitation",
+        back_populates="company",
+        cascade="all, delete-orphan",
+    )
+    requests: Mapped[list["Request"]] = relationship(
+        "Request", back_populates="company", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

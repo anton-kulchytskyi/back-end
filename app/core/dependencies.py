@@ -2,12 +2,68 @@ from typing import Annotated
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.unit_of_work import AbstractUnitOfWork, SQLAlchemyUnitOfWork
 from app.models.user import User
-from app.services.auth_service import AuthService
-from app.services.deps import get_auth_service
+from app.services import (
+    AuthService,
+    CompanyService,
+    InvitationService,
+    MemberService,
+    PermissionService,
+    RequestService,
+    UserService,
+)
+
+
+def get_uow() -> AbstractUnitOfWork:
+    return SQLAlchemyUnitOfWork()
+
+
+def get_user_service(uow: AbstractUnitOfWork = Depends(get_uow)) -> UserService:
+    return UserService(uow=uow)
+
+
+def get_auth_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    user_service: UserService = Depends(get_user_service),
+) -> AuthService:
+    return AuthService(uow=uow, user_service=user_service)
+
+
+def get_permission_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+) -> PermissionService:
+    return PermissionService(uow=uow)
+
+
+def get_company_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    permission_service: PermissionService = Depends(get_permission_service),
+) -> CompanyService:
+    return CompanyService(uow=uow, permission_service=permission_service)
+
+
+def get_member_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    permission_service: PermissionService = Depends(get_permission_service),
+) -> MemberService:
+    return MemberService(uow=uow, permission_service=permission_service)
+
+
+def get_invitation_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    permission_service: PermissionService = Depends(get_permission_service),
+) -> InvitationService:
+    return InvitationService(uow=uow, permission_service=permission_service)
+
+
+def get_request_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    permission_service: PermissionService = Depends(get_permission_service),
+) -> RequestService:
+    return RequestService(uow=uow, permission_service=permission_service)
+
 
 # HTTPBearer scheme for token authentication
 security = HTTPBearer()
@@ -15,7 +71,6 @@ security = HTTPBearer()
 
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
-    db: AsyncSession = Depends(get_db),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> User:
     """
@@ -26,4 +81,4 @@ async def get_current_user(
     - Auth0 token (RS256) from Auth0 flow
     """
     token = credentials.credentials
-    return await auth_service.get_current_user_from_token(db, token)
+    return await auth_service.get_current_user_from_token(token)

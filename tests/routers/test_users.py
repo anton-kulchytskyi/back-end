@@ -1,5 +1,3 @@
-"""Tests for user endpoints with authentication."""
-
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,8 +40,9 @@ async def test_get_all_users_pagination(client: AsyncClient, test_user: User):
 
 
 @pytest.mark.asyncio
-async def test_update_user(client: AsyncClient, test_user: User, test_user_token: str):
-    """User can update their own profile with authentication."""
+async def test_update_user(
+    client: AsyncClient, test_user: User, test_user_token: str, db_session: AsyncSession
+):
     update_data = {"full_name": "Updated Name"}
 
     response = await client.put(
@@ -53,18 +52,22 @@ async def test_update_user(client: AsyncClient, test_user: User, test_user_token
     )
 
     assert response.status_code == 200
-    data = response.json()
-    assert data["full_name"] == "Updated Name"
+
+    db_session.expunge(test_user)
+
+    updated = await db_session.get(User, test_user.id)
+
+    assert updated.full_name == "Updated Name"
 
 
 @pytest.mark.asyncio
 async def test_update_user_password(
     client: AsyncClient, test_user: User, test_user_token: str, db_session: AsyncSession
 ):
-    """User can update their password with authentication."""
     from app.core.security import verify_password
 
     update_data = {"password": "newpassword123"}
+    original_password_hash = test_user.hashed_password
 
     response = await client.put(
         "/users/me",
@@ -74,14 +77,16 @@ async def test_update_user_password(
 
     assert response.status_code == 200
 
-    # Refresh user from DB and verify password
-    await db_session.refresh(test_user)
-    assert verify_password("newpassword123", test_user.hashed_password)
+    db_session.expunge(test_user)
+
+    updated = await db_session.get(User, test_user.id)
+
+    assert updated.hashed_password != original_password_hash
+    assert verify_password("newpassword123", updated.hashed_password)
 
 
 @pytest.mark.asyncio
 async def test_delete_user(client: AsyncClient, test_user: User, test_user_token: str):
-    """User can delete their own profile with authentication."""
     response = await client.delete(
         "/users/me", headers={"Authorization": f"Bearer {test_user_token}"}
     )
@@ -94,13 +99,11 @@ async def test_delete_user(client: AsyncClient, test_user: User, test_user_token
 
 @pytest.mark.asyncio
 async def test_update_requires_authentication(client: AsyncClient):
-    """Update endpoint requires authentication (403 Forbidden when no token)."""
     response = await client.put("/users/me", json={"full_name": "New Name"})
     assert response.status_code == 403
 
 
 @pytest.mark.asyncio
 async def test_delete_requires_authentication(client: AsyncClient):
-    """Delete endpoint requires authentication (403 Forbidden when no token)."""
     response = await client.delete("/users/me")
     assert response.status_code == 403

@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import (
+    get_current_user,
+    get_invitation_service,
+    get_member_service,
+    get_request_service,
+)
 from app.enums.status import Status
 from app.models.user import User
 from app.schemas.invitation import (
@@ -10,12 +13,8 @@ from app.schemas.invitation import (
     InvitationResponse,
     InvitationsListResponse,
 )
+from app.schemas.member import CompanyMemberResponse, CompanyMembersListResponse
 from app.schemas.request import RequestResponse, RequestsListResponse
-from app.services.deps import (
-    get_invitation_service,
-    get_member_service,
-    get_request_service,
-)
 from app.services.invitation_service import InvitationService
 from app.services.member_service import MemberService
 from app.services.request_service import RequestService
@@ -23,7 +22,82 @@ from app.services.request_service import RequestService
 router = APIRouter()
 
 
-# --- Invitation management (Owner) --- #
+# --- Member management --- #
+
+
+@router.delete(
+    "/{company_id}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Owner removes member",
+    tags=["Companies - Members"],
+)
+async def remove_member(
+    company_id: int,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    member_service: MemberService = Depends(get_member_service),
+):
+    """
+    Owner removes member from company.
+
+    Cannot remove owner.
+
+    **Permissions**: Owner only
+    """
+    await member_service.remove_member(company_id, user_id, current_user.id)
+
+
+@router.post(
+    "/{company_id}/leave",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="User leaves company",
+    tags=["Companies - Members"],
+)
+async def leave_company(
+    company_id: int,
+    current_user: User = Depends(get_current_user),
+    member_service: MemberService = Depends(get_member_service),
+):
+    """
+    User leaves company.
+
+    Owner cannot leave (must delete company or transfer ownership).
+
+    **Permissions**: Member only (not owner)
+    """
+    await member_service.leave_company(company_id, current_user.id)
+
+
+@router.get(
+    "/{company_id}/members",
+    response_model=CompanyMembersListResponse,
+    summary="Get company members (paginated)",
+    tags=["Companies - Members"],
+)
+async def get_company_members(
+    company_id: int,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    member_service: MemberService = Depends(get_member_service),
+):
+    skip = (page - 1) * page_size
+
+    members, total = await member_service.get_company_members(
+        company_id=company_id,
+        skip=skip,
+        limit=page_size,
+    )
+
+    return CompanyMembersListResponse(
+        members=[CompanyMemberResponse.model_validate(m) for m in members],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=(total + page_size - 1) // page_size,
+    )
+
+
+# --- Invitation management --- #
 
 
 @router.post(
@@ -37,7 +111,6 @@ async def send_invitation(
     company_id: int,
     invitation_data: InvitationCreateRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
     invitation_service: InvitationService = Depends(get_invitation_service),
 ):
     """
@@ -46,7 +119,7 @@ async def send_invitation(
     **Permissions**: Owner only
     """
     invitation = await invitation_service.send_invitation(
-        db, company_id, invitation_data.user_email, current_user.id
+        company_id, invitation_data.user_email, current_user.id
     )
     return InvitationResponse.model_validate(invitation)
 
@@ -63,7 +136,6 @@ async def get_company_invitations(
     page_size: int = Query(10, ge=1, le=100),
     status_filter: Status | None = Query(None, alias="status"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
     invitation_service: InvitationService = Depends(get_invitation_service),
 ):
     """
@@ -72,8 +144,9 @@ async def get_company_invitations(
     **Permissions**: Owner only
     """
     skip = (page - 1) * page_size
+
     invitations, total = await invitation_service.get_company_invitations(
-        db, company_id, current_user.id, skip, page_size, status_filter
+        company_id, current_user.id, skip, page_size, status_filter
     )
 
     return InvitationsListResponse(
@@ -92,10 +165,8 @@ async def get_company_invitations(
     tags=["Companies - Invitations"],
 )
 async def cancel_invitation(
-    company_id: int,
     invitation_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
     invitation_service: InvitationService = Depends(get_invitation_service),
 ):
     """
@@ -103,10 +174,10 @@ async def cancel_invitation(
 
     **Permissions**: Owner only
     """
-    await invitation_service.cancel_invitation(db, invitation_id, current_user.id)
+    await invitation_service.cancel_invitation(invitation_id, current_user.id)
 
 
-# --- Request management (Owner) --- #
+# --- Request management --- #
 
 
 @router.get(
@@ -121,7 +192,6 @@ async def get_company_requests(
     page_size: int = Query(10, ge=1, le=100),
     status_filter: Status | None = Query(None, alias="status"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
     request_service: RequestService = Depends(get_request_service),
 ):
     """
@@ -130,8 +200,9 @@ async def get_company_requests(
     **Permissions**: Owner only
     """
     skip = (page - 1) * page_size
+
     requests, total = await request_service.get_company_requests(
-        db, company_id, current_user.id, skip, page_size, status_filter
+        company_id, current_user.id, skip, page_size, status_filter
     )
 
     return RequestsListResponse(
@@ -153,7 +224,6 @@ async def accept_request(
     company_id: int,
     request_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
     request_service: RequestService = Depends(get_request_service),
 ):
     """
@@ -164,7 +234,7 @@ async def accept_request(
     **Permissions**: Owner only
     """
     request = await request_service.accept_request(
-        db, request_id, company_id, current_user.id
+        request_id, company_id, current_user.id
     )
     return RequestResponse.model_validate(request)
 
@@ -179,7 +249,6 @@ async def decline_request(
     company_id: int,
     request_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
     request_service: RequestService = Depends(get_request_service),
 ):
     """
@@ -190,54 +259,6 @@ async def decline_request(
     **Permissions**: Owner only
     """
     request = await request_service.decline_request(
-        db, request_id, company_id, current_user.id
+        request_id, company_id, current_user.id
     )
     return RequestResponse.model_validate(request)
-
-
-# --- Member management (Owner) --- #
-
-
-@router.delete(
-    "/{company_id}/members/{user_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Owner removes member",
-    tags=["Companies - Members"],
-)
-async def remove_member(
-    company_id: int,
-    user_id: int,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-    member_service: MemberService = Depends(get_member_service),
-):
-    """
-    Owner removes member from company.
-
-    Cannot remove owner.
-
-    **Permissions**: Owner only
-    """
-    await member_service.remove_member(db, company_id, user_id, current_user.id)
-
-
-@router.post(
-    "/{company_id}/leave",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="User leaves company",
-    tags=["Companies - Members"],
-)
-async def leave_company(
-    company_id: int,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-    member_service: MemberService = Depends(get_member_service),
-):
-    """
-    User leaves company.
-
-    Owner cannot leave (must delete company or transfer ownership).
-
-    **Permissions**: Member only (not owner)
-    """
-    await member_service.leave_company(db, company_id, current_user.id)

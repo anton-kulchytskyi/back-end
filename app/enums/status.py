@@ -7,3 +7,4 @@ class Status(str, Enum):
     PENDING = "pending"
     ACCEPTED = "accepted"
     DECLINED = "declined"
+    CANCELED = "canceled"

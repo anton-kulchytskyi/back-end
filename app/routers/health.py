@@ -3,7 +3,7 @@ from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_raw_session
 from app.core.redis import get_redis
 
 router = APIRouter()
@@ -20,7 +20,7 @@ async def health_check():
 
 
 @router.get("/health/db")
-async def check_database(db: AsyncSession = Depends(get_db)):
+async def check_database(db: AsyncSession = Depends(get_raw_session)):
     """
     Database Connection Check
 
