@@ -23,10 +23,10 @@ async def test_auth0_token_creates_new_user(
         return "newauth0user@example.com"
 
     monkeypatch.setattr(
-        "app.services.auth_service.verify_auth0_token", mock_verify_auth0_token
+        "app.services.users.auth_service.verify_auth0_token", mock_verify_auth0_token
     )
     monkeypatch.setattr(
-        "app.services.auth_service.get_email_from_auth0_token",
+        "app.services.users.auth_service.get_email_from_auth0_token",
         mock_get_email_from_auth0_token,
     )
     response = await client.get(
@@ -65,10 +65,10 @@ async def test_auth0_token_existing_user(
         return test_user.email
 
     monkeypatch.setattr(
-        "app.services.auth_service.verify_auth0_token", mock_verify_auth0_token
+        "app.services.users.auth_service.verify_auth0_token", mock_verify_auth0_token
     )
     monkeypatch.setattr(
-        "app.services.auth_service.get_email_from_auth0_token",
+        "app.services.users.auth_service.get_email_from_auth0_token",
         mock_get_email_from_auth0_token,
     )
 
@@ -95,10 +95,10 @@ async def test_auth0_token_no_email(client: AsyncClient, monkeypatch):
         return None
 
     monkeypatch.setattr(
-        "app.services.auth_service.verify_auth0_token", mock_verify_auth0_token
+        "app.services.users.auth_service.verify_auth0_token", mock_verify_auth0_token
     )
     monkeypatch.setattr(
-        "app.services.auth_service.get_email_from_auth0_token",
+        "app.services.users.auth_service.get_email_from_auth0_token",
         mock_get_email_from_auth0_token,
     )
     response = await client.get(
@@ -116,7 +116,7 @@ async def test_auth0_token_invalid(client: AsyncClient, monkeypatch):
         raise Auth0Error("Invalid Auth0 token: signature verification failed")
 
     monkeypatch.setattr(
-        "app.services.auth_service.verify_auth0_token", mock_verify_auth0_token
+        "app.services.users.auth_service.verify_auth0_token", mock_verify_auth0_token
     )
 
     response = await client.get(

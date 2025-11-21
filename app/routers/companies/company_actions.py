@@ -15,9 +15,9 @@ from app.schemas.invitation import (
 )
 from app.schemas.member import CompanyMemberResponse, CompanyMembersListResponse
 from app.schemas.request import RequestResponse, RequestsListResponse
-from app.services.invitation_service import InvitationService
-from app.services.member_service import MemberService
-from app.services.request_service import RequestService
+from app.services.companies.invitation_service import InvitationService
+from app.services.companies.member_service import MemberService
+from app.services.companies.request_service import RequestService
 
 router = APIRouter()
 

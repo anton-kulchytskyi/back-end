@@ -10,7 +10,7 @@ from app.schemas.request import (
     RequestResponse,
     RequestsListResponse,
 )
-from app.services.request_service import RequestService
+from app.services.companies.request_service import RequestService
 
 router = APIRouter()
 

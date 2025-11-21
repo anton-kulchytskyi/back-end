@@ -10,7 +10,7 @@ from app.core.security import (
 )
 from app.core.unit_of_work import AbstractUnitOfWork
 from app.models.user import User
-from app.services.user_service import UserService
+from app.services.users.user_service import UserService
 
 
 class AuthService:

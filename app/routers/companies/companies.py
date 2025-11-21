@@ -10,7 +10,7 @@ from app.schemas.company import (
     CompanyResponse,
     CompanyUpdateRequest,
 )
-from app.services.company_service import CompanyService
+from app.services.companies.company_service import CompanyService
 
 router = APIRouter()
 

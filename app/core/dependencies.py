@@ -6,6 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.core.unit_of_work import AbstractUnitOfWork, SQLAlchemyUnitOfWork
 from app.models.user import User
 from app.services import (
+    AdminService,
     AuthService,
     CompanyService,
     InvitationService,
@@ -49,6 +50,16 @@ def get_member_service(
     permission_service: PermissionService = Depends(get_permission_service),
 ) -> MemberService:
     return MemberService(uow=uow, permission_service=permission_service)
+
+
+def get_admin_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    permission_service: PermissionService = Depends(get_permission_service),
+    company_service: CompanyService = Depends(get_company_service),
+) -> AdminService:
+    return AdminService(
+        uow=uow, permission_service=permission_service, company_service=company_service
+    )
 
 
 def get_invitation_service(

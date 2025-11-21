@@ -4,7 +4,7 @@ from app.core.dependencies import get_current_user, get_invitation_service
 from app.enums.status import Status
 from app.models.user import User
 from app.schemas.invitation import InvitationResponse, InvitationsListResponse
-from app.services.invitation_service import InvitationService
+from app.services.companies.invitation_service import InvitationService
 
 router = APIRouter()
 

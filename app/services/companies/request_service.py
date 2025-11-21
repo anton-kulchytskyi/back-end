@@ -9,8 +9,8 @@ from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
 from app.enums.status import Status
 from app.models.request import Request
-from app.services.base_membership_service import BaseMembershipService
-from app.services.permission_service import PermissionService
+from app.services.companies.base_membership_service import BaseMembershipService
+from app.services.companies.permission_service import PermissionService
 
 
 class RequestService(BaseMembershipService):
@@ -33,13 +33,13 @@ class RequestService(BaseMembershipService):
         """
         User creates request to join company.
         """
-        async with self._uow as uow:
+        async with self._uow:
             try:
-                company = await uow.companies.get_one_by_id(company_id)
+                company = await self._uow.companies.get_one_by_id(company_id)
                 if not company:
                     raise NotFoundException(f"Company with id={company_id} not found")
 
-                existing_member = await uow.company_member.get_member_by_ids(
+                existing_member = await self._uow.company_member.get_member_by_ids(
                     company_id, user_id
                 )
                 if existing_member:
@@ -47,8 +47,10 @@ class RequestService(BaseMembershipService):
                         "You are already a member of this company"
                     )
 
-                existing_request = await uow.requests.get_pending_by_company_and_user(
-                    company_id, user_id
+                existing_request = (
+                    await self._uow.requests.get_pending_by_company_and_user(
+                        company_id, user_id
+                    )
                 )
                 if existing_request:
                     raise ConflictException(
@@ -60,9 +62,9 @@ class RequestService(BaseMembershipService):
                     user_id=user_id,
                     status=Status.PENDING,
                 )
-                created_request = await uow.requests.create_one(request)
+                created_request = await self._uow.requests.create_one(request)
 
-                await uow.commit()
+                await self._uow.commit()
 
                 logger.info(
                     f"Request created: User {user_id} → Company {company_id} "
@@ -80,9 +82,9 @@ class RequestService(BaseMembershipService):
         """
         User cancels own pending request (changes status to CANCELED).
         """
-        async with self._uow as uow:
+        async with self._uow:
             try:
-                request = await uow.requests.get_one_by_id(request_id)
+                request = await self._uow.requests.get_one_by_id(request_id)
                 if not request:
                     raise NotFoundException(f"Request with id={request_id} not found")
 
@@ -94,9 +96,9 @@ class RequestService(BaseMembershipService):
                 await self._validate_status_for_action(request, "cancel")
 
                 request.status = Status.CANCELED
-                updated_request = await uow.requests.update_one(request)
+                updated_request = await self._uow.requests.update_one(request)
 
-                await uow.commit()
+                await self._uow.commit()
 
                 logger.info(f"Request cancelled: ID {request_id}, User {user_id}")
                 return updated_request
@@ -113,8 +115,8 @@ class RequestService(BaseMembershipService):
         """
         User views sent requests. (Read-only)
         """
-        async with self._uow as uow:
-            return await uow.requests.get_by_user(user_id, skip, limit, status)
+        async with self._uow:
+            return await self._uow.requests.get_by_user(user_id, skip, limit, status)
 
     async def get_company_requests(
         self,
@@ -129,8 +131,10 @@ class RequestService(BaseMembershipService):
         """
         await self._permission_service.require_owner(company_id, owner_id)
 
-        async with self._uow as uow:
-            return await uow.requests.get_by_company(company_id, skip, limit, status)
+        async with self._uow:
+            return await self._uow.requests.get_by_company(
+                company_id, skip, limit, status
+            )
 
     async def accept_request(
         self, request_id: int, company_id: int, owner_id: int
@@ -140,9 +144,9 @@ class RequestService(BaseMembershipService):
         """
         await self._permission_service.require_owner(company_id, owner_id)
 
-        async with self._uow as uow:
+        async with self._uow:
             try:
-                request = await uow.requests.get_one_by_id(request_id)
+                request = await self._uow.requests.get_one_by_id(request_id)
                 if not request:
                     raise NotFoundException(f"Request with id={request_id} not found")
 
@@ -155,11 +159,11 @@ class RequestService(BaseMembershipService):
                 await self._check_existing_member(company_id, request.user_id)
 
                 request.status = Status.ACCEPTED
-                updated_request = await uow.requests.update_one(request)
+                updated_request = await self._uow.requests.update_one(request)
 
                 await self._create_member(company_id, request.user_id)
 
-                await uow.commit()
+                await self._uow.commit()
 
                 logger.info(
                     f"Request accepted: ID {request_id}, "
@@ -181,9 +185,9 @@ class RequestService(BaseMembershipService):
         """
         await self._permission_service.require_owner(company_id, owner_id)
 
-        async with self._uow as uow:
+        async with self._uow:
             try:
-                request = await uow.requests.get_one_by_id(request_id)
+                request = await self._uow.requests.get_one_by_id(request_id)
                 if not request:
                     raise NotFoundException(f"Request with id={request_id} not found")
 
@@ -195,9 +199,9 @@ class RequestService(BaseMembershipService):
                 await self._validate_status_for_action(request, "decline")
 
                 request.status = Status.DECLINED
-                updated_request = await uow.requests.update_one(request)
+                updated_request = await self._uow.requests.update_one(request)
 
-                await uow.commit()
+                await self._uow.commit()
 
                 logger.info(
                     f"Request declined: ID {request_id}, "

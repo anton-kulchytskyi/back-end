@@ -6,8 +6,8 @@ from app.enums.status import Status
 from app.models.company import Company
 from app.models.company_member import CompanyMember
 from app.models.user import User
-from app.services.permission_service import PermissionService
-from app.services.request_service import RequestService
+from app.services.companies.permission_service import PermissionService
+from app.services.companies.request_service import RequestService
 
 
 @pytest.mark.asyncio
