@@ -13,6 +13,7 @@ from app.core.dependencies import get_auth_service, get_uow, get_user_service
 from app.core.unit_of_work import AbstractUnitOfWork
 from app.enums.role import Role
 from app.main import app
+from app.models.company import Company
 from app.models.company_member import CompanyMember
 from app.models.user import User
 from app.services.users.user_service import UserService
@@ -154,19 +155,41 @@ async def test_user_token(client: AsyncClient, test_user: User):
     return token_data["access_token"]
 
 
-# ==========================================
-# Additional factories for company tests
-# ==========================================
+@pytest_asyncio.fixture
+async def test_company(db_session: AsyncSession, test_user: User):
+    """Create a test company with test_user as owner."""
+    company = Company(
+        name="Test Company",
+        description="Test Description",
+        is_visible=True,
+        owner_id=test_user.id,
+    )
+    db_session.add(company)
+    await db_session.commit()
+    await db_session.refresh(company)
+
+    # Add owner membership
+    membership = CompanyMember(
+        company_id=company.id,
+        user_id=test_user.id,
+        role=Role.OWNER,
+    )
+    db_session.add(membership)
+    await db_session.commit()
+    await db_session.refresh(membership)
+
+    return company
 
 
 @pytest_asyncio.fixture
-async def another_user(db_session: AsyncSession):
+async def test_member_user(db_session: AsyncSession):
+    """Create a regular member user."""
     from app.core.security import hash_password
 
     user = User(
-        email="another@example.com",
-        full_name="Another User",
-        hashed_password=hash_password("password123"),
+        email="member@example.com",
+        full_name="Member User",
+        hashed_password=hash_password("memberpass123"),
         is_active=True,
     )
     db_session.add(user)
@@ -176,13 +199,26 @@ async def another_user(db_session: AsyncSession):
 
 
 @pytest_asyncio.fixture
-async def third_user(db_session: AsyncSession):
+async def test_member_token(client: AsyncClient, test_member_user: User):
+    """Get token for member user."""
+    login_data = {
+        "username": test_member_user.email,
+        "password": "memberpass123",
+    }
+    response = await client.post("/auth/login", data=login_data)
+    token_data = response.json()
+    return token_data["access_token"]
+
+
+@pytest_asyncio.fixture
+async def test_admin_user(db_session: AsyncSession):
+    """Create an admin user."""
     from app.core.security import hash_password
 
     user = User(
-        email="third@example.com",
-        full_name="Third User",
-        hashed_password=hash_password("password123"),
+        email="admin@example.com",
+        full_name="Admin User",
+        hashed_password=hash_password("adminpass123"),
         is_active=True,
     )
     db_session.add(user)
@@ -192,64 +228,51 @@ async def third_user(db_session: AsyncSession):
 
 
 @pytest_asyncio.fixture
-async def auth_header(client: AsyncClient):
-    async def _get_auth_header(user):
-        login_data = {
-            "username": user.email,
-            "password": "password123",
-        }
-        response = await client.post("/auth/login", data=login_data)
-        token = response.json()["access_token"]
-        return {"Authorization": f"Bearer {token}"}
-
-    return _get_auth_header
+async def test_admin_token(client: AsyncClient, test_admin_user: User):
+    """Get token for admin user."""
+    login_data = {
+        "username": test_admin_user.email,
+        "password": "adminpass123",
+    }
+    response = await client.post("/auth/login", data=login_data)
+    token_data = response.json()
+    return token_data["access_token"]
 
 
 @pytest_asyncio.fixture
-async def company_factory(
-    db_session: AsyncSession, unit_of_work: TestSQLAlchemyUnitOfWork
+async def company_with_member(
+    db_session: AsyncSession,
+    test_company: Company,
+    test_member_user: User,
 ):
-    async def _create_company(owner_id: int, name: str = "Test Company"):
-        from app.models.company import Company
-
-        company = Company(
-            name=name,
-            description="desc",
-            is_visible=True,
-            owner_id=owner_id,
-        )
-        db_session.add(company)
-        await db_session.commit()
-        await db_session.refresh(company)
-
-        # owner must also be a CompanyMember
-        owner_member = CompanyMember(
-            company_id=company.id,
-            user_id=owner_id,
-            role=Role.OWNER,
-        )
-        db_session.add(owner_member)
-        await db_session.commit()
-
-        return company
-
-    return _create_company
+    """Add member to company."""
+    membership = CompanyMember(
+        company_id=test_company.id,
+        user_id=test_member_user.id,
+        role=Role.MEMBER,
+    )
+    db_session.add(membership)
+    await db_session.commit()
+    await db_session.refresh(membership)
+    return test_company
 
 
 @pytest_asyncio.fixture
-async def membership_factory(db_session: AsyncSession):
-    async def _create_member(company_id: int, user_id: int, role: Role):
-        member = CompanyMember(
-            company_id=company_id,
-            user_id=user_id,
-            role=role,
-        )
-        db_session.add(member)
-        await db_session.commit()
-        await db_session.refresh(member)
-        return member
-
-    return _create_member
+async def company_with_admin(
+    db_session: AsyncSession,
+    test_company: Company,
+    test_admin_user: User,
+):
+    """Add admin to company."""
+    membership = CompanyMember(
+        company_id=test_company.id,
+        user_id=test_admin_user.id,
+        role=Role.ADMIN,
+    )
+    db_session.add(membership)
+    await db_session.commit()
+    await db_session.refresh(membership)
+    return test_company
 
 
 # ==================== PYTEST CONFIGURATION ====================

@@ -1,12 +1,12 @@
 from fastapi import APIRouter
 
 from app.routers.auth import router as auth_router
-from app.routers.company.admins import router as company_admins_router
-from app.routers.company.companies import router as companies_router
-from app.routers.company.company_actions import router as company_actions_router
-from app.routers.company.invitations import router as invitations_router
-from app.routers.company.requests import router as requests_router
+from app.routers.companies.admins import router as company_admins_router
+from app.routers.companies.companies import router as companies_router
+from app.routers.companies.company_actions import router as company_actions_router
 from app.routers.health import router as health_router
+from app.routers.invitations import router as invitations_router
+from app.routers.requests import router as requests_router
 from app.routers.users import router as users_router
 
 router = APIRouter()
@@ -16,7 +16,7 @@ router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 router.include_router(
     company_admins_router,
     prefix="/companies/{company_id}/admins",
-    tags=["Company Admins"],
+    tags=["Companies - Admins"],
 )
 router.include_router(companies_router, prefix="/companies", tags=["Companies"])
 router.include_router(
