@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.schemas.company import CompanyCreateRequest
-from app.services.company_service import company_service
+from app.services.company_service import CompanyService
+from app.services.permission_service import PermissionService
 
 
 @pytest.mark.asyncio
@@ -119,7 +120,7 @@ async def test_get_company_by_id(client: AsyncClient, test_user_token: str):
 @pytest.mark.asyncio
 async def test_get_company_by_id_not_found(client: AsyncClient):
     response = await client.get("/companies/9999")
-    assert response.status_code == 500
+    assert response.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -162,7 +163,7 @@ async def test_update_company_visibility(client: AsyncClient, test_user_token: s
 
 @pytest.mark.asyncio
 async def test_update_company_not_owner(
-    client: AsyncClient, test_user_token: str, db_session: AsyncSession
+    client: AsyncClient, test_user_token: str, db_session: AsyncSession, unit_of_work
 ):
     u2 = User(email="x@x.com", full_name="x", hashed_password="x")
     db_session.add(u2)
@@ -170,7 +171,12 @@ async def test_update_company_not_owner(
     await db_session.refresh(u2)
 
     data = CompanyCreateRequest(name="A", description="B")
-    company = await company_service.create_company(db_session, data, u2.id)
+    permission_service = PermissionService(uow=unit_of_work)
+    company_service = CompanyService(
+        uow=unit_of_work, permission_service=permission_service
+    )
+
+    company = await company_service.create_company(data, u2.id)
 
     resp = await client.put(
         f"/companies/{company.id}",
@@ -198,12 +204,12 @@ async def test_delete_company_owner(client: AsyncClient, test_user_token: str):
     assert response.status_code == 204
 
     get_resp = await client.get(f"/companies/{company_id}")
-    assert get_resp.status_code == 500
+    assert get_resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_delete_company_not_owner(
-    client: AsyncClient, test_user_token: str, db_session: AsyncSession
+    client: AsyncClient, test_user_token: str, db_session: AsyncSession, unit_of_work
 ):
     u2 = User(email="del@x.com", full_name="x", hashed_password="x")
     db_session.add(u2)
@@ -211,7 +217,11 @@ async def test_delete_company_not_owner(
     await db_session.refresh(u2)
 
     data = CompanyCreateRequest(name="C", description="D")
-    company = await company_service.create_company(db_session, data, u2.id)
+    permission_service = PermissionService(uow=unit_of_work)
+    company_service = CompanyService(
+        uow=unit_of_work, permission_service=permission_service
+    )
+    company = await company_service.create_company(data, u2.id)
 
     resp = await client.delete(
         f"/companies/{company.id}",

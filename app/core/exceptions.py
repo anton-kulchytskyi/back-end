@@ -1,49 +1,62 @@
+"""Custom exceptions for the application."""
+
 from fastapi import HTTPException, status
 
 
-# --- Base project exceptions --- #
+# --- Base exception --- #
 class BaseAppException(HTTPException):
+    """Base exception for all app exceptions."""
+
     def __init__(self, status_code: int, detail: str):
         super().__init__(status_code=status_code, detail=detail)
 
 
-# --- Internal service exception --- #
-class ServiceException(BaseAppException):
-    def __init__(self, detail: str = "Internal server error"):
-        super().__init__(status.HTTP_500_INTERNAL_SERVER_ERROR, detail)
+# --- Generic HTTP exceptions --- #
 
 
-# --- Domain-specific exceptions (Users etc.) --- #
-class UserNotFoundException(BaseAppException):
-    def __init__(self, user_id: int | None = None):
-        detail = f"User with id={user_id} not found" if user_id else "User not found"
-        super().__init__(status.HTTP_404_NOT_FOUND, detail)
+class BadRequestException(BaseAppException):
+    """Invalid request or business logic violation (400)."""
+
+    def __init__(self, detail: str = "Bad request"):
+        super().__init__(status.HTTP_400_BAD_REQUEST, detail)
 
 
-class UserAlreadyExistsException(BaseAppException):
-    def __init__(self, email: str):
-        super().__init__(
-            status.HTTP_409_CONFLICT,
-            f"User with email {email} already exists",
-        )
-
-
-# --- Authentication exceptions --- #
 class UnauthorizedException(BaseAppException):
+    """Authentication failed (401)."""
+
     def __init__(self, detail: str = "Could not validate credentials"):
-        super().__init__(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=detail,
-        )
+        super().__init__(status.HTTP_401_UNAUTHORIZED, detail)
         self.headers = {"WWW-Authenticate": "Bearer"}
 
 
-# --- Permission exceptions --- #
-class PermissionDeniedException(HTTPException):
+class PermissionDeniedException(BaseAppException):
+    """Permission denied (403)."""
+
     def __init__(
         self, detail: str = "You don't have permission to perform this action"
     ):
-        super().__init__(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=detail,
-        )
+        super().__init__(status.HTTP_403_FORBIDDEN, detail)
+
+
+class NotFoundException(BaseAppException):
+    """Resource not found (404)."""
+
+    def __init__(self, detail: str = "Resource not found"):
+        super().__init__(status.HTTP_404_NOT_FOUND, detail)
+
+
+class ConflictException(BaseAppException):
+    """Resource conflict - duplicate or already exists (409)."""
+
+    def __init__(self, detail: str = "Resource already exists"):
+        super().__init__(status.HTTP_409_CONFLICT, detail)
+
+
+# --- Internal server error --- #
+
+
+class ServiceException(BaseAppException):
+    """Internal server error (500) - use only for unexpected errors."""
+
+    def __init__(self, detail: str = "Internal server error"):
+        super().__init__(status.HTTP_500_INTERNAL_SERVER_ERROR, detail)

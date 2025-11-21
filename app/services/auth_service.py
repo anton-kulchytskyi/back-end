@@ -1,5 +1,3 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.auth0 import Auth0Error, get_email_from_auth0_token, verify_auth0_token
 from app.core.exceptions import ServiceException, UnauthorizedException
 from app.core.logger import logger
@@ -10,68 +8,73 @@ from app.core.security import (
     decode_refresh_token,
     verify_password,
 )
-from app.db.user_repository import user_repository
+from app.core.unit_of_work import AbstractUnitOfWork
 from app.models.user import User
-from app.services.user_service import user_service
+from app.services.user_service import UserService
 
 
 class AuthService:
     """Service for authentication operations."""
 
+    def __init__(self, uow: AbstractUnitOfWork, user_service: UserService):
+        self._uow = uow
+        self._user_service = user_service
+
     async def authenticate_with_credentials(
-        self, db: AsyncSession, email: str, password: str
+        self, email: str, password: str
     ) -> dict[str, str]:
         """
         Authenticate user with email and password.
         """
-        try:
-            user = await user_repository.get_by_email(db, email)
+        async with self._uow:
+            try:
+                user = await self._uow.users.get_by_email(email)
 
-            if not user:
-                logger.debug(
-                    f"Authentication failed: user with email {email} not found"
-                )
-                raise UnauthorizedException("Invalid email or password")
+                if not user:
+                    logger.debug(
+                        f"Authentication failed: user with email {email} not found"
+                    )
+                    raise UnauthorizedException("Invalid email or password")
 
-            if not verify_password(password, user.hashed_password):
-                logger.debug(
-                    f"Authentication failed: invalid password for user {email}"
-                )
-                raise UnauthorizedException("Invalid email or password")
+                if not verify_password(password, user.hashed_password):
+                    logger.debug(
+                        f"Authentication failed: invalid password for user {email}"
+                    )
+                    raise UnauthorizedException("Invalid email or password")
 
-            access_token = create_access_token(data={"sub": str(user.id)})
-            refresh_token = create_refresh_token(data={"sub": str(user.id)})
+                access_token = create_access_token(data={"sub": str(user.id)})
+                refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
-            logger.info(f"User authenticated successfully: {email}")
+                logger.info(f"User authenticated successfully: {email}")
 
-            return {
-                "access_token": access_token,
-                "refresh_token": refresh_token,
-                "token_type": "bearer",
-            }
+                return {
+                    "access_token": access_token,
+                    "refresh_token": refresh_token,
+                    "token_type": "bearer",
+                }
 
-        except UnauthorizedException:
-            raise
-        except Exception as e:
-            logger.error(f"Error authenticating user {email}: {str(e)}")
-            raise ServiceException("Authentication failed")
+            except UnauthorizedException:
+                raise
+            except Exception as e:
+                logger.error(f"Error authenticating user {email}: {str(e)}")
+                raise ServiceException("Authentication failed")
 
-    async def get_current_user_from_token(self, db: AsyncSession, token: str) -> User:
+    async def get_current_user_from_token(self, token: str) -> User:
         """
         Get current user from token.
         Supports both our JWT tokens (HS256) and Auth0 tokens (RS256).
         """
-        user = await self._try_get_user_from_jwt(db, token)
+        user = await self._try_get_user_from_jwt(token)
         if user:
             return user
 
-        user = await self._try_get_user_from_auth0(db, token)
+        user = await self._try_get_user_from_auth0(token)
         if user:
             return user
 
         raise UnauthorizedException("Could not validate credentials")
 
-    async def _try_get_user_from_jwt(self, db: AsyncSession, token: str) -> User | None:
+    async def _try_get_user_from_jwt(self, token: str) -> User | None:
         """
         Try to authenticate user with our JWT token.
         Returns User if successful, None if token is not valid JWT.
@@ -86,7 +89,8 @@ class AuthService:
                 logger.debug("JWT token missing user ID")
                 return None
 
-            user = await user_repository.get_one(db, int(user_id))
+            async with self._uow:
+                user = await self._uow.users.get_one_by_id(int(user_id))
             if not user:
                 logger.debug(f"User with ID {user_id} not found")
                 return None
@@ -101,9 +105,7 @@ class AuthService:
             logger.debug(f"Unexpected error validating JWT token: {str(e)}")
             return None
 
-    async def _try_get_user_from_auth0(
-        self, db: AsyncSession, token: str
-    ) -> User | None:
+    async def _try_get_user_from_auth0(self, token: str) -> User | None:
         """
         Try to authenticate user with Auth0 token.
         Returns User if successful, None if token is not valid Auth0 token.
@@ -117,10 +119,11 @@ class AuthService:
                 logger.warning("No email found in Auth0 token")
                 return None
 
-            user = await user_repository.get_by_email(db, email)
+            async with self._uow:
+                user = await self._uow.users.get_by_email(email)
             if not user:
                 logger.info(f"Auth0 user not found, creating new user: {email}")
-                user = await user_service.create_user(db, email, is_external=True)
+                user = await self._user_service.create_user(email, is_external=True)
             else:
                 logger.debug(f"User authenticated from Auth0 token: {user.email}")
 
@@ -133,9 +136,7 @@ class AuthService:
             logger.error(f"Error validating Auth0 token: {str(e)}")
             return None
 
-    async def refresh_access_token(
-        self, db: AsyncSession, refresh_token: str
-    ) -> dict[str, str]:
+    async def refresh_access_token(self, refresh_token: str) -> dict[str, str]:
         """
         Refresh user's access and refresh tokens.
 
@@ -150,7 +151,8 @@ class AuthService:
         if not user_id:
             raise UnauthorizedException("Invalid refresh token payload")
 
-        user = await user_repository.get_one(db, int(user_id))
+        async with self._uow:
+            user = await self._uow.users.get_one_by_id(int(user_id))
         if not user:
             raise UnauthorizedException("User not found")
 
@@ -164,6 +166,3 @@ class AuthService:
             "refresh_token": new_refresh_token,
             "token_type": "bearer",
         }
-
-
-auth_service = AuthService()

@@ -11,10 +11,7 @@ from app.models.user import User
 async def test_auth0_token_creates_new_user(
     client: AsyncClient, db_session: AsyncSession, monkeypatch
 ):
-    """Test GET /auth/me with Auth0 token - auto-creates new user"""
-
     def mock_verify_auth0_token(token: str):
-        """Simulate successful Auth0 token verification"""
         return {
             "sub": "auth0|mock_new_user_123",
             "email": "newauth0user@example.com",
@@ -23,7 +20,6 @@ async def test_auth0_token_creates_new_user(
         }
 
     def mock_get_email_from_auth0_token(token: str):
-        """Simulate email extraction from Auth0 token"""
         return "newauth0user@example.com"
 
     monkeypatch.setattr(
@@ -43,9 +39,11 @@ async def test_auth0_token_creates_new_user(
     assert data["full_name"] == "Newauth0user"
     assert data["is_active"] is True
 
-    from app.db.user_repository import user_repository
+    from app.db.user_repository import UserRepository
 
-    user = await user_repository.get_by_email(db_session, "newauth0user@example.com")
+    user_repository = UserRepository(db_session)
+
+    user = await user_repository.get_by_email("newauth0user@example.com")
     assert user is not None
     assert user.email == "newauth0user@example.com"
     assert user.is_active is True
@@ -55,8 +53,6 @@ async def test_auth0_token_creates_new_user(
 async def test_auth0_token_existing_user(
     client: AsyncClient, test_user: User, monkeypatch
 ):
-    """Test GET /auth/me with Auth0 token - uses existing user (no duplicate)"""
-
     def mock_verify_auth0_token(token: str):
         return {
             "sub": "auth0|existing_user_456",
@@ -88,8 +84,6 @@ async def test_auth0_token_existing_user(
 
 @pytest.mark.asyncio
 async def test_auth0_token_no_email(client: AsyncClient, monkeypatch):
-    """Test GET /auth/me - Auth0 token without email claim"""
-
     def mock_verify_auth0_token(token: str):
         return {
             "sub": "auth0|no_email_123",
@@ -116,7 +110,6 @@ async def test_auth0_token_no_email(client: AsyncClient, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_auth0_token_invalid(client: AsyncClient, monkeypatch):
-    """Test GET /auth/me - invalid Auth0 token"""
     from app.core.auth0 import Auth0Error
 
     def mock_verify_auth0_token(token: str):

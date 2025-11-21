@@ -1,10 +1,8 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_user_service
 from app.models.user import User
 from app.schemas.user import (
     SignUpRequest,
@@ -12,7 +10,6 @@ from app.schemas.user import (
     UsersListResponse,
     UserUpdateRequest,
 )
-from app.services.deps import get_user_service
 from app.services.user_service import UserService
 
 router = APIRouter()
@@ -22,14 +19,13 @@ router = APIRouter()
 async def get_users(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 10,
-    db: AsyncSession = Depends(get_db),
-    service: UserService = Depends(get_user_service),
+    user_service: UserService = Depends(get_user_service),
 ):
     """
     Retrieve a paginated list of all users.
     """
     skip = (page - 1) * page_size
-    users, total = await service.get_all_users(db, skip, page_size)
+    users, total = await user_service.get_all_users(skip, page_size)
     total_pages = (total + page_size - 1) // page_size
 
     return UsersListResponse(
@@ -44,53 +40,49 @@ async def get_users(
 @router.get("/{user_id}", response_model=UserDetailResponse)
 async def get_user(
     user_id: int,
-    db: AsyncSession = Depends(get_db),
-    service: UserService = Depends(get_user_service),
+    user_service: UserService = Depends(get_user_service),
 ):
     """
     Retrieve a single user by ID.
     """
-    user = await service.get_user_by_id(db, user_id)
+    user = await user_service.get_user_by_id(user_id)
     return UserDetailResponse.model_validate(user)
 
 
 @router.post("", response_model=UserDetailResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(
     user_data: SignUpRequest,
-    db: AsyncSession = Depends(get_db),
-    service: UserService = Depends(get_user_service),
+    user_service: UserService = Depends(get_user_service),
 ):
     """
     Register a new user.
     """
-    user = await service.register_user(db, user_data)
+    user = await user_service.register_user(user_data)
     return UserDetailResponse.model_validate(user)
 
 
 @router.put("/me", response_model=UserDetailResponse)
 async def update_user(
     user_data: UserUpdateRequest,
-    db: AsyncSession = Depends(get_db),
-    service: UserService = Depends(get_user_service),
+    user_service: UserService = Depends(get_user_service),
     current_user: User = Depends(get_current_user),
 ):
     """
     Update current user's profile. Users can only update their own profile.
     """
-    user = await service.get_user_by_id(db, current_user.id)
-    updated_user = await service.update_user(db, user, user_data, current_user.id)
+    user = await user_service.get_user_by_id(current_user.id)
+    updated_user = await user_service.update_user(user, user_data, current_user.id)
     return UserDetailResponse.model_validate(updated_user)
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
-    db: AsyncSession = Depends(get_db),
-    service: UserService = Depends(get_user_service),
+    user_service: UserService = Depends(get_user_service),
     current_user: User = Depends(get_current_user),
 ):
     """
     Delete current user's profile. Users can only delete their own profile.
     """
-    user = await service.get_user_by_id(db, current_user.id)
-    await service.delete_user(db, user, current_user.id)
+    user = await user_service.get_user_by_id(current_user.id)
+    await user_service.delete_user(user, current_user.id)
     return None

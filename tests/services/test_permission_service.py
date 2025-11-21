@@ -7,7 +7,7 @@ from app.enums.role import Role
 from app.models.company import Company
 from app.models.company_member import CompanyMember
 from app.models.user import User
-from app.services.permission_service import permission_service
+from app.services.permission_service import PermissionService
 
 
 @pytest_asyncio.fixture
@@ -56,19 +56,20 @@ async def test_get_role_owner(
     db_session: AsyncSession,
     test_company: Company,
     owner_user: User,
+    unit_of_work,
     owner_membership: CompanyMember,
 ):
-    role = await permission_service.get_role(db_session, test_company.id, owner_user.id)
+    permission_service = PermissionService(uow=unit_of_work)
+    role = await permission_service.get_role(test_company.id, owner_user.id)
     assert role == "owner"
 
 
 @pytest.mark.asyncio
 async def test_get_role_no_membership(
-    db_session: AsyncSession, test_company: Company, regular_user: User
+    test_company: Company, regular_user: User, unit_of_work
 ):
-    role = await permission_service.get_role(
-        db_session, test_company.id, regular_user.id
-    )
+    permission_service = PermissionService(uow=unit_of_work)
+    role = await permission_service.get_role(test_company.id, regular_user.id)
     assert role is None
 
 
@@ -77,22 +78,23 @@ async def test_require_owner_success(
     db_session: AsyncSession,
     test_company: Company,
     owner_user: User,
+    unit_of_work,
     owner_membership: CompanyMember,
 ):
-    await permission_service.require_owner(db_session, test_company.id, owner_user.id)
+    permission_service = PermissionService(uow=unit_of_work)
+    await permission_service.require_owner(test_company.id, owner_user.id)
 
 
 @pytest.mark.asyncio
 async def test_require_owner_fails_for_non_owner(
-    db_session: AsyncSession, test_company: Company, regular_user: User
+    test_company: Company, regular_user: User, unit_of_work
 ):
     with pytest.raises(
         PermissionDeniedException,
         match="Only the company owner can perform this action",
     ):
-        await permission_service.require_owner(
-            db_session, test_company.id, regular_user.id
-        )
+        permission_service = PermissionService(uow=unit_of_work)
+        await permission_service.require_owner(test_company.id, regular_user.id)
 
 
 @pytest.mark.asyncio
@@ -100,42 +102,43 @@ async def test_require_admin_success_for_owner(
     db_session: AsyncSession,
     test_company: Company,
     owner_user: User,
+    unit_of_work,
     owner_membership: CompanyMember,
 ):
-    await permission_service.require_admin(db_session, test_company.id, owner_user.id)
+    permission_service = PermissionService(uow=unit_of_work)
+    await permission_service.require_admin(test_company.id, owner_user.id)
 
 
 @pytest.mark.asyncio
 async def test_require_admin_fails_for_regular_user(
-    db_session: AsyncSession, test_company: Company, regular_user: User
+    test_company: Company, regular_user: User, unit_of_work
 ):
     with pytest.raises(
         PermissionDeniedException,
         match="Only company admin or owner can perform this action",
     ):
-        await permission_service.require_admin(
-            db_session, test_company.id, regular_user.id
-        )
+        permission_service = PermissionService(uow=unit_of_work)
+        await permission_service.require_admin(test_company.id, regular_user.id)
 
 
 @pytest.mark.asyncio
 async def test_require_member_fails_for_non_member(
-    db_session: AsyncSession, test_company: Company, regular_user: User
+    test_company: Company, regular_user: User, unit_of_work
 ):
     with pytest.raises(
         PermissionDeniedException,
         match="You must be a company member to perform this action",
     ):
-        await permission_service.require_member(
-            db_session, test_company.id, regular_user.id
-        )
+        permission_service = PermissionService(uow=unit_of_work)
+        await permission_service.require_member(test_company.id, regular_user.id)
 
 
 @pytest.mark.asyncio
 async def test_require_member_success_for_owner(
-    db_session: AsyncSession,
     test_company: Company,
     owner_user: User,
+    unit_of_work,
     owner_membership: CompanyMember,
 ):
-    await permission_service.require_member(db_session, test_company.id, owner_user.id)
+    permission_service = PermissionService(uow=unit_of_work)
+    await permission_service.require_member(test_company.id, owner_user.id)
