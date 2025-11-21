@@ -9,8 +9,8 @@ from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
 from app.enums.status import Status
 from app.models.invitation import Invitation
-from app.services.base_membership_service import BaseMembershipService
-from app.services.permission_service import PermissionService
+from app.services.companies.base_membership_service import BaseMembershipService
+from app.services.companies.permission_service import PermissionService
 
 
 class InvitationService(BaseMembershipService):
@@ -33,17 +33,17 @@ class InvitationService(BaseMembershipService):
         """
         await self._permission_service.require_owner(company_id, owner_id)
 
-        async with self._uow as uow:
+        async with self._uow:
             try:
-                company = await uow.companies.get_one_by_id(company_id)
+                company = await self._uow.companies.get_one_by_id(company_id)
                 if not company:
                     raise NotFoundException(f"Company with ID {company_id} not found")
 
-                user = await uow.users.get_by_email(user_email)
+                user = await self._uow.users.get_by_email(user_email)
                 if not user:
                     raise NotFoundException(f"User with email {user_email} not found")
 
-                existing_member = await uow.company_member.get_member_by_ids(
+                existing_member = await self._uow.company_member.get_member_by_ids(
                     company_id, user.id
                 )
                 if existing_member:
@@ -52,7 +52,7 @@ class InvitationService(BaseMembershipService):
                     )
 
                 existing_invitation = (
-                    await uow.invitations.get_pending_by_company_and_user(
+                    await self._uow.invitations.get_pending_by_company_and_user(
                         company_id, user.id
                     )
                 )
@@ -66,9 +66,9 @@ class InvitationService(BaseMembershipService):
                     user_id=user.id,
                     status=Status.PENDING,
                 )
-                created_invitation = await uow.invitations.create_one(invitation)
+                created_invitation = await self._uow.invitations.create_one(invitation)
 
-                await uow.commit()
+                await self._uow.commit()
 
                 logger.info(
                     f"Invitation sent: Company {company_id} → "
@@ -90,9 +90,9 @@ class InvitationService(BaseMembershipService):
         """
         Owner cancels pending invitation (changes status to CANCELED).
         """
-        async with self._uow as uow:
+        async with self._uow:
             try:
-                invitation = await uow.invitations.get_one_by_id(invitation_id)
+                invitation = await self._uow.invitations.get_one_by_id(invitation_id)
                 if not invitation:
                     raise NotFoundException(
                         f"Invitation with ID {invitation_id} not found"
@@ -105,9 +105,9 @@ class InvitationService(BaseMembershipService):
                 await self._validate_status_for_action(invitation, "cancel")
 
                 invitation.status = Status.CANCELED
-                updated_invitation = await uow.invitations.update_one(invitation)
+                updated_invitation = await self._uow.invitations.update_one(invitation)
 
-                await uow.commit()
+                await self._uow.commit()
 
                 logger.info(f"Invitation cancelled: ID {invitation_id}")
                 return updated_invitation
@@ -131,8 +131,10 @@ class InvitationService(BaseMembershipService):
         """
         await self._permission_service.require_owner(company_id, owner_id)
 
-        async with self._uow as uow:
-            return await uow.invitations.get_by_company(company_id, skip, limit, status)
+        async with self._uow:
+            return await self._uow.invitations.get_by_company(
+                company_id, skip, limit, status
+            )
 
     async def get_user_invitations(
         self, user_id: int, skip: int, limit: int, status: Status | None = None
@@ -140,16 +142,16 @@ class InvitationService(BaseMembershipService):
         """
         User views received invitations. (Read-only)
         """
-        async with self._uow as uow:
-            return await uow.invitations.get_by_user(user_id, skip, limit, status)
+        async with self._uow:
+            return await self._uow.invitations.get_by_user(user_id, skip, limit, status)
 
     async def accept_invitation(self, invitation_id: int, user_id: int) -> Invitation:
         """
         User accepts invitation.
         """
-        async with self._uow as uow:
+        async with self._uow:
             try:
-                invitation = await uow.invitations.get_one_by_id(invitation_id)
+                invitation = await self._uow.invitations.get_one_by_id(invitation_id)
                 if not invitation:
                     raise NotFoundException(
                         f"Invitation with ID {invitation_id} not found"
@@ -164,11 +166,11 @@ class InvitationService(BaseMembershipService):
                 await self._check_existing_member(invitation.company_id, user_id)
 
                 invitation.status = Status.ACCEPTED
-                updated_invitation = await uow.invitations.update_one(invitation)
+                updated_invitation = await self._uow.invitations.update_one(invitation)
 
                 await self._create_member(invitation.company_id, user_id)
 
-                await uow.commit()
+                await self._uow.commit()
 
                 logger.info(
                     f"Invitation accepted: ID {invitation_id}, "
@@ -186,9 +188,9 @@ class InvitationService(BaseMembershipService):
         """
         User declines invitation. Changes status to DECLINED.
         """
-        async with self._uow as uow:
+        async with self._uow:
             try:
-                invitation = await uow.invitations.get_one_by_id(invitation_id)
+                invitation = await self._uow.invitations.get_one_by_id(invitation_id)
                 if not invitation:
                     raise NotFoundException(
                         f"Invitation with ID {invitation_id} not found"
@@ -202,9 +204,9 @@ class InvitationService(BaseMembershipService):
                 await self._validate_status_for_action(invitation, "decline")
 
                 invitation.status = Status.DECLINED
-                updated_invitation = await uow.invitations.update_one(invitation)
+                updated_invitation = await self._uow.invitations.update_one(invitation)
 
-                await uow.commit()
+                await self._uow.commit()
 
                 logger.info(f"Invitation declined: ID {invitation_id}, User {user_id}")
                 return updated_invitation

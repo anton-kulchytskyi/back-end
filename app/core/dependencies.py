@@ -14,6 +14,7 @@ from app.services import (
     RequestService,
     UserService,
 )
+from app.services.companies.admin_service import AdminService
 
 
 def get_uow() -> AbstractUnitOfWork:
@@ -49,6 +50,13 @@ def get_member_service(
     permission_service: PermissionService = Depends(get_permission_service),
 ) -> MemberService:
     return MemberService(uow=uow, permission_service=permission_service)
+
+
+def get_admin_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    permission_service: PermissionService = Depends(get_permission_service),
+) -> AdminService:
+    return AdminService(uow=uow, permission_service=permission_service)
 
 
 def get_invitation_service(

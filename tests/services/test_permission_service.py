@@ -7,7 +7,7 @@ from app.enums.role import Role
 from app.models.company import Company
 from app.models.company_member import CompanyMember
 from app.models.user import User
-from app.services.permission_service import PermissionService
+from app.services.companies.permission_service import PermissionService
 
 
 @pytest_asyncio.fixture

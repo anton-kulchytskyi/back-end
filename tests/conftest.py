@@ -11,9 +11,11 @@ from sqlalchemy.pool import NullPool
 from app.core.database import Base
 from app.core.dependencies import get_auth_service, get_uow, get_user_service
 from app.core.unit_of_work import AbstractUnitOfWork
+from app.enums.role import Role
 from app.main import app
+from app.models.company_member import CompanyMember
 from app.models.user import User
-from app.services.user_service import UserService
+from app.services.users.user_service import UserService
 
 # ==================== TEST DATABASE SETUP ====================
 
@@ -100,12 +102,12 @@ async def override_dependencies_fixture(db_session: AsyncSession):
         return test_uow
 
     def override_get_user_service():
-        from app.services.user_service import UserService
+        from app.services.users.user_service import UserService
 
         return UserService(test_uow)
 
     def override_get_auth_service():
-        from app.services.auth_service import AuthService
+        from app.services.users.auth_service import AuthService
 
         return AuthService(uow=test_uow, user_service=UserService(test_uow))
 
@@ -150,6 +152,104 @@ async def test_user_token(client: AsyncClient, test_user: User):
     response = await client.post("/auth/login", data=login_data)
     token_data = response.json()
     return token_data["access_token"]
+
+
+# ==========================================
+# Additional factories for company tests
+# ==========================================
+
+
+@pytest_asyncio.fixture
+async def another_user(db_session: AsyncSession):
+    from app.core.security import hash_password
+
+    user = User(
+        email="another@example.com",
+        full_name="Another User",
+        hashed_password=hash_password("password123"),
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def third_user(db_session: AsyncSession):
+    from app.core.security import hash_password
+
+    user = User(
+        email="third@example.com",
+        full_name="Third User",
+        hashed_password=hash_password("password123"),
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def auth_header(client: AsyncClient):
+    async def _get_auth_header(user):
+        login_data = {
+            "username": user.email,
+            "password": "password123",
+        }
+        response = await client.post("/auth/login", data=login_data)
+        token = response.json()["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+
+    return _get_auth_header
+
+
+@pytest_asyncio.fixture
+async def company_factory(
+    db_session: AsyncSession, unit_of_work: TestSQLAlchemyUnitOfWork
+):
+    async def _create_company(owner_id: int, name: str = "Test Company"):
+        from app.models.company import Company
+
+        company = Company(
+            name=name,
+            description="desc",
+            is_visible=True,
+            owner_id=owner_id,
+        )
+        db_session.add(company)
+        await db_session.commit()
+        await db_session.refresh(company)
+
+        # owner must also be a CompanyMember
+        owner_member = CompanyMember(
+            company_id=company.id,
+            user_id=owner_id,
+            role=Role.OWNER,
+        )
+        db_session.add(owner_member)
+        await db_session.commit()
+
+        return company
+
+    return _create_company
+
+
+@pytest_asyncio.fixture
+async def membership_factory(db_session: AsyncSession):
+    async def _create_member(company_id: int, user_id: int, role: Role):
+        member = CompanyMember(
+            company_id=company_id,
+            user_id=user_id,
+            role=role,
+        )
+        db_session.add(member)
+        await db_session.commit()
+        await db_session.refresh(member)
+        return member
+
+    return _create_member
 
 
 # ==================== PYTEST CONFIGURATION ====================

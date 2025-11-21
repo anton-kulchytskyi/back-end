@@ -7,8 +7,8 @@ from app.core.dependencies import get_auth_service, get_current_user, get_user_s
 from app.models.user import User
 from app.schemas.auth import RefreshTokenRequest, TokenResponse
 from app.schemas.user import SignUpRequest, UserDetailResponse
-from app.services.auth_service import AuthService
-from app.services.user_service import UserService
+from app.services.users.auth_service import AuthService
+from app.services.users.user_service import UserService
 
 router = APIRouter()
 

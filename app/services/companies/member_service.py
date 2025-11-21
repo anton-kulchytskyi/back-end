@@ -4,7 +4,7 @@ from app.core.unit_of_work import AbstractUnitOfWork
 from app.enums.role import Role
 from app.models.company import Company
 from app.models.company_member import CompanyMember
-from app.services.permission_service import PermissionService
+from app.services.companies.permission_service import PermissionService
 
 
 class MemberService:

@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.schemas.company import CompanyCreateRequest
-from app.services.company_service import CompanyService
-from app.services.permission_service import PermissionService
+from app.services.companies.company_service import CompanyService
+from app.services.companies.permission_service import PermissionService
 
 
 @pytest.mark.asyncio

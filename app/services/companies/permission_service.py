@@ -15,7 +15,7 @@ class PermissionService:
         Get user's role in the company.
         """
         async with self._uow:
-            role = await self._uow.company_member.get_user_role(company_id, user_id)
+            role = await self._uow.company_member.get_member_role(company_id, user_id)
             return role
 
     async def require_owner(self, company_id: int, user_id: int) -> None:

@@ -1,10 +1,10 @@
-from app.services.auth_service import AuthService
-from app.services.company_service import CompanyService
-from app.services.invitation_service import InvitationService
-from app.services.member_service import MemberService
-from app.services.permission_service import PermissionService
-from app.services.request_service import RequestService
-from app.services.user_service import UserService
+from app.services.companies.company_service import CompanyService
+from app.services.companies.invitation_service import InvitationService
+from app.services.companies.member_service import MemberService
+from app.services.companies.permission_service import PermissionService
+from app.services.companies.request_service import RequestService
+from app.services.users.auth_service import AuthService
+from app.services.users.user_service import UserService
 
 __all__ = [
     "AuthService",

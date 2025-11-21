@@ -11,7 +11,9 @@ from app.core.unit_of_work import AbstractUnitOfWork
 from app.enums.role import Role
 from app.enums.status import Status
 from app.models.company_member import CompanyMember
-from app.services.permission_service import PermissionService
+from app.models.invitation import Invitation
+from app.models.request import Request
+from app.services.companies.permission_service import PermissionService
 
 
 class BaseMembershipService(ABC):
@@ -67,7 +69,9 @@ class BaseMembershipService(ABC):
         async with self._uow:
             try:
                 repo = self._get_repository()
-                entity = await repo.get_one_by_id(entity_id)
+                entity: Invitation | Request | None = await repo.get_one_by_id(
+                    entity_id
+                )
 
                 if not entity:
                     raise NotFoundException(
@@ -105,7 +109,9 @@ class BaseMembershipService(ABC):
         async with self._uow:
             try:
                 repo = self._get_repository()
-                entity = await repo.get_one_by_id(entity_id)
+                entity: Invitation | Request | None = await repo.get_one_by_id(
+                    entity_id
+                )
 
                 if not entity:
                     raise NotFoundException(
