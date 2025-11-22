@@ -1,9 +1,8 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.dependencies import get_current_user, get_user_service
 from app.models.user import User
+from app.schemas.pagination import PaginationBaseSchema
 from app.schemas.user import (
     SignUpRequest,
     UserDetailResponse,
@@ -17,24 +16,14 @@ router = APIRouter()
 
 @router.get("", response_model=UsersListResponse)
 async def get_users(
-    page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=100)] = 10,
+    pagination: PaginationBaseSchema = Depends(),
     user_service: UserService = Depends(get_user_service),
 ):
     """
-    Retrieve a paginated list of all users.
+    Retrieve paginated list of users using unified pagination.
+    Query params: ?page=1&limit=10
     """
-    skip = (page - 1) * page_size
-    users, total = await user_service.get_all_users(skip, page_size)
-    total_pages = (total + page_size - 1) // page_size
-
-    return UsersListResponse(
-        users=[UserDetailResponse.model_validate(u) for u in users],
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=total_pages,
-    )
+    return await user_service.get_users_paginated(pagination)
 
 
 @router.get("/{user_id}", response_model=UserDetailResponse)

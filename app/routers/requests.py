@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query, status
 from app.core.dependencies import get_current_user, get_request_service
 from app.enums.status import Status
 from app.models.user import User
+from app.schemas.pagination import PaginationBaseSchema
 from app.schemas.request import (
     RequestCreateRequest,
     RequestResponse,
@@ -68,8 +69,7 @@ async def cancel_request(
     summary="User views sent requests",
 )
 async def get_my_requests(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
+    pagination: PaginationBaseSchema = Depends(),
     status_filter: Status | None = Query(None, alias="status"),
     current_user: User = Depends(get_current_user),
     request_service: RequestService = Depends(get_request_service),
@@ -83,16 +83,8 @@ async def get_my_requests(
 
     **Permissions**: Authenticated user
     """
-    skip = (page - 1) * page_size
-
-    requests, total = await request_service.get_user_requests(
-        current_user.id, skip, page_size, status_filter
-    )
-
-    return RequestsListResponse(
-        requests=[RequestResponse.model_validate(req) for req in requests],
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=(total + page_size - 1) // page_size,
+    return await request_service.get_user_requests_paginated(
+        user_id=current_user.id,
+        pagination=pagination,
+        status=status_filter,
     )

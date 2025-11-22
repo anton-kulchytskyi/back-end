@@ -4,8 +4,15 @@ from app.core.unit_of_work import AbstractUnitOfWork
 from app.enums.role import Role
 from app.models.company import Company
 from app.models.company_member import CompanyMember
-from app.schemas.company import CompanyCreateRequest, CompanyUpdateRequest
+from app.schemas.company import (
+    CompaniesListResponse,
+    CompanyCreateRequest,
+    CompanyResponse,
+    CompanyUpdateRequest,
+)
+from app.schemas.pagination import PaginationBaseSchema
 from app.services.companies.permission_service import PermissionService
+from app.utils.pagination import paginate_query
 
 
 class CompanyService:
@@ -47,19 +54,60 @@ class CompanyService:
                 logger.error(f"Error creating company: {str(e)}")
                 raise ServiceException("Failed to create company")
 
-    async def get_all_companies(
-        self, skip: int, limit: int
-    ) -> tuple[list[Company], int]:
+    async def get_companies_paginated(
+        self,
+        pagination: PaginationBaseSchema,
+    ) -> CompaniesListResponse:
         """
-        Get all companies (paginated).
+        Get all visible companies using unified pagination.
         """
         async with self._uow:
             try:
-                return await self._uow.companies.get_visible_companies(skip, limit)
+
+                async def db_fetch(skip: int, limit: int):
+                    return await self._uow.companies.get_visible_companies(
+                        skip=skip, limit=limit
+                    )
+
+                return await paginate_query(
+                    db_fetch_func=db_fetch,
+                    pagination=pagination,
+                    response_schema=CompaniesListResponse,
+                    item_schema=CompanyResponse,
+                )
 
             except Exception as e:
-                logger.error(f"Error fetching companies: {str(e)}")
+                logger.error(f"Error fetching paginated companies: {e}")
                 raise ServiceException("Failed to retrieve companies")
+
+    async def get_user_companies_paginated(
+        self,
+        owner_id: int,
+        pagination: PaginationBaseSchema,
+    ) -> CompaniesListResponse:
+        """
+        Get all companies owned by a specific user (paginated).
+        """
+        async with self._uow:
+            try:
+
+                async def db_fetch(skip: int, limit: int):
+                    return await self._uow.companies.get_by_owner(
+                        owner_id, skip=skip, limit=limit
+                    )
+
+                return await paginate_query(
+                    db_fetch_func=db_fetch,
+                    pagination=pagination,
+                    response_schema=CompaniesListResponse,
+                    item_schema=CompanyResponse,
+                )
+
+            except Exception as e:
+                logger.error(
+                    f"Error fetching paginated companies for user {owner_id}: {e}"
+                )
+                raise ServiceException("Failed to retrieve user's companies")
 
     async def get_company_by_id(self, company_id: int) -> Company:
         """
@@ -119,16 +167,3 @@ class CompanyService:
             except Exception as e:
                 logger.error(f"Error deleting company {company.id}: {str(e)}")
                 raise ServiceException("Failed to delete company")
-
-    async def get_user_companies(
-        self, owner_id: int, skip: int, limit: int
-    ) -> tuple[list[Company], int]:
-        """
-        Get all companies owned by a specific user.
-        """
-        async with self._uow:
-            try:
-                return await self._uow.companies.get_by_owner(owner_id, skip, limit)
-            except Exception as e:
-                logger.error(f"Error fetching companies for user {owner_id}: {str(e)}")
-                raise ServiceException("Failed to retrieve user companies")

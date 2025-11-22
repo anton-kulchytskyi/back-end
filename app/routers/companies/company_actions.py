@@ -13,7 +13,8 @@ from app.schemas.invitation import (
     InvitationResponse,
     InvitationsListResponse,
 )
-from app.schemas.member import CompanyMemberResponse, CompanyMembersListResponse
+from app.schemas.member import CompanyMembersListResponse
+from app.schemas.pagination import PaginationBaseSchema
 from app.schemas.request import RequestResponse, RequestsListResponse
 from app.services.companies.invitation_service import InvitationService
 from app.services.companies.member_service import MemberService
@@ -76,24 +77,15 @@ async def leave_company(
 )
 async def get_company_members(
     company_id: int,
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
+    pagination: PaginationBaseSchema = Depends(),
     member_service: MemberService = Depends(get_member_service),
 ):
-    skip = (page - 1) * page_size
-
-    members, total = await member_service.get_company_members(
+    """
+    Get paginated list of company members using unified pagination format.
+    """
+    return await member_service.get_company_members_paginated(
         company_id=company_id,
-        skip=skip,
-        limit=page_size,
-    )
-
-    return CompanyMembersListResponse(
-        members=[CompanyMemberResponse.model_validate(m) for m in members],
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=(total + page_size - 1) // page_size,
+        pagination=pagination,
     )
 
 
@@ -188,29 +180,21 @@ async def cancel_invitation(
 )
 async def get_company_requests(
     company_id: int,
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
+    pagination: PaginationBaseSchema = Depends(),
     status_filter: Status | None = Query(None, alias="status"),
     current_user: User = Depends(get_current_user),
     request_service: RequestService = Depends(get_request_service),
 ):
     """
-    Owner views membership requests to company.
+    Owner views membership requests to their company.
 
-    **Permissions**: Owner only
+    Permissions: Owner only.
     """
-    skip = (page - 1) * page_size
-
-    requests, total = await request_service.get_company_requests(
-        company_id, current_user.id, skip, page_size, status_filter
-    )
-
-    return RequestsListResponse(
-        requests=[RequestResponse.model_validate(req) for req in requests],
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=(total + page_size - 1) // page_size,
+    return await request_service.get_company_requests_paginated(
+        company_id=company_id,
+        owner_id=current_user.id,
+        pagination=pagination,
+        status=status_filter,
     )
 
 

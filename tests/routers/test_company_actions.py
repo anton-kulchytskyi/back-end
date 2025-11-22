@@ -230,7 +230,7 @@ async def test_owner_send_invitation(
 
 
 @pytest.mark.asyncio
-async def test_owner_get_company_requests(
+async def test_owner_get_company_requests_pagination(
     client: AsyncClient, db_session, test_user, test_user_token
 ):
     company = Company(
@@ -285,10 +285,11 @@ async def test_get_company_members_success(client, db_session):
 
     assert response.status_code == 200
     body = response.json()
+
     assert body["total"] == 3
-    assert len(body["members"]) == 3
+    assert len(body["results"]) == 3
     assert body["page"] == 1
-    assert body["page_size"] == 10
+    assert body["limit"] == 10
 
 
 @pytest.mark.asyncio

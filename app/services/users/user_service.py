@@ -10,9 +10,16 @@ from app.core.exceptions import (
 )
 from app.core.logger import logger
 from app.core.security import hash_password
-from app.core.unit_of_work import AbstractUnitOfWork, SQLAlchemyUnitOfWork
+from app.core.unit_of_work import AbstractUnitOfWork
 from app.models.user import User
-from app.schemas.user import SignUpRequest, UserUpdateRequest
+from app.schemas.pagination import PaginationBaseSchema
+from app.schemas.user import (
+    SignUpRequest,
+    UserDetailResponse,
+    UsersListResponse,
+    UserUpdateRequest,
+)
+from app.utils.pagination import paginate_query
 
 
 class UserService:
@@ -71,13 +78,31 @@ class UserService:
             user_data.email, user_data.full_name, user_data.password
         )
 
-    async def get_all_users(self, skip: int, limit: int):
-        """Return paginated list of users."""
+    async def get_users_paginated(
+        self,
+        pagination: PaginationBaseSchema,
+    ) -> UsersListResponse:
+        """
+        Повертає пагінований список користувачів у уніфікованому форматі.
+        Використовує загальну утиліту paginate_query.
+        """
         async with self._uow:
             try:
-                return await self._uow.users.get_all(skip, limit)
+
+                async def db_fetch(skip: int, limit: int):
+                    return await self._uow.users.get_all(skip, limit)
+
+                paginated_result = await paginate_query(
+                    db_fetch_func=db_fetch,
+                    pagination=pagination,
+                    response_schema=UsersListResponse,
+                    item_schema=UserDetailResponse,
+                )
+
+                return paginated_result
+
             except Exception as e:
-                logger.error(f"Error fetching users: {e}")
+                logger.error(f"Error fetching paginated users: {e}")
                 raise ServiceException("Failed to retrieve users")
 
     async def get_user_by_id(self, user_id: int) -> User:
@@ -159,6 +184,3 @@ class UserService:
             except Exception as e:
                 logger.error(f"Error deleting user {user.id}: {str(e)}")
                 raise ServiceException("Failed to delete user")
-
-
-user_service = UserService(uow=SQLAlchemyUnitOfWork)

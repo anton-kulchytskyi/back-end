@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr
 
 from app.schemas.base import InvitationRequestResponse
+from app.schemas.pagination import PaginatedResponseBaseSchema
 
 
 class InvitationCreateRequest(BaseModel):
@@ -20,11 +21,7 @@ class InvitationResponse(InvitationRequestResponse):
     pass  # All fields inherited from base
 
 
-class InvitationsListResponse(BaseModel):
-    """Paginated list of invitations."""
+class InvitationsListResponse(PaginatedResponseBaseSchema[InvitationResponse]):
+    """Unified paginated response for invitations."""
 
-    invitations: list[InvitationResponse]
-    total: int
-    page: int
-    page_size: int
-    total_pages: int
+    pass  # All fields inherited from pagination

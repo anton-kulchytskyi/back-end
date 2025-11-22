@@ -7,6 +7,7 @@ from app.enums.role import Role
 from app.models.company import Company
 from app.models.user import User
 from app.schemas.company import CompanyCreateRequest, CompanyUpdateRequest
+from app.schemas.pagination import PaginationBaseSchema
 from app.services.companies.company_service import CompanyService
 from app.services.companies.permission_service import PermissionService
 
@@ -105,14 +106,13 @@ async def test_get_all_visible_companies(
         uow=unit_of_work, permission_service=permission_service
     )
 
+    # Create visible and hidden companies
     await company_service.create_company(
         CompanyCreateRequest(name="C1", description="D1"), owner.id
     )
-
     await company_service.create_company(
         CompanyCreateRequest(name="C2", description="D2"), owner.id
     )
-
     hidden = await company_service.create_company(
         CompanyCreateRequest(name="C3", description="D3"), owner.id
     )
@@ -120,17 +120,22 @@ async def test_get_all_visible_companies(
     update_data = CompanyUpdateRequest(is_visible=False)
     await company_service.update_company(hidden, update_data, owner.id)
 
-    companies, total = await company_service.get_all_companies(0, 10)
+    # NEW unified call
+    pagination = PaginationBaseSchema(page=1, limit=10)
+    response = await company_service.get_companies_paginated(pagination)
 
-    assert total == 2
-    assert len(companies) == 2
-    assert all(c.is_visible for c in companies)
+    assert response.total == 2
+    assert len(response.results) == 2
+    assert all(c.is_visible for c in response.results)
 
 
 @pytest.mark.asyncio
-async def test_get_user_companies(db_session: AsyncSession, owner: User, unit_of_work):
+async def test_get_user_companies_paginated(
+    db_session: AsyncSession, owner: User, unit_of_work
+):
     data1 = CompanyCreateRequest(name="O1", description="D1")
     data2 = CompanyCreateRequest(name="O2", description="D2")
+
     permission_service = PermissionService(uow=unit_of_work)
     company_service = CompanyService(
         uow=unit_of_work, permission_service=permission_service
@@ -139,11 +144,16 @@ async def test_get_user_companies(db_session: AsyncSession, owner: User, unit_of
     await company_service.create_company(data1, owner.id)
     await company_service.create_company(data2, owner.id)
 
-    companies, total = await company_service.get_user_companies(owner.id, 0, 10)
+    # NEW unified call
+    pagination = PaginationBaseSchema(page=1, limit=10)
+    response = await company_service.get_user_companies_paginated(
+        owner_id=owner.id,
+        pagination=pagination,
+    )
 
-    assert total == 2
-    assert len(companies) == 2
-    assert all(c.owner_id == owner.id for c in companies)
+    assert response.total == 2
+    assert len(response.results) == 2
+    assert all(c.owner_id == owner.id for c in response.results)
 
 
 @pytest.mark.asyncio

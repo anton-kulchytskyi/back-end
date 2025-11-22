@@ -1,6 +1,4 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.dependencies import get_company_service, get_current_user
 from app.models.user import User
@@ -10,6 +8,7 @@ from app.schemas.company import (
     CompanyResponse,
     CompanyUpdateRequest,
 )
+from app.schemas.pagination import PaginationBaseSchema
 from app.services.companies.company_service import CompanyService
 
 router = APIRouter()
@@ -33,27 +32,14 @@ async def create_company(
 
 @router.get("", response_model=CompaniesListResponse)
 async def get_companies(
-    page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=100)] = 10,
+    pagination: PaginationBaseSchema = Depends(),
     company_service: CompanyService = Depends(get_company_service),
 ):
     """
-    Get all visible companies (paginated).
-
-    Returns only companies with is_visible=True.
-    No authentication required (public endpoint).
+    Get all visible companies using unified pagination.
+    Public endpoint.
     """
-    skip = (page - 1) * page_size
-    companies, total = await company_service.get_all_companies(skip, page_size)
-    total_pages = (total + page_size - 1) // page_size
-
-    return CompaniesListResponse(
-        companies=[CompanyResponse.model_validate(c) for c in companies],
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=total_pages,
-    )
+    return await company_service.get_companies_paginated(pagination)
 
 
 @router.get("/{company_id}", response_model=CompanyResponse)

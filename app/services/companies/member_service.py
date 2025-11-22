@@ -3,8 +3,10 @@ from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
 from app.enums.role import Role
 from app.models.company import Company
-from app.models.company_member import CompanyMember
+from app.schemas.member import CompanyMemberResponse, CompanyMembersListResponse
+from app.schemas.pagination import PaginationBaseSchema
 from app.services.companies.permission_service import PermissionService
+from app.utils.pagination import paginate_query
 
 
 class MemberService:
@@ -14,12 +16,11 @@ class MemberService:
         self._uow = uow
         self._permission_service = permission_service
 
-    async def get_company_members(
-        self, company_id: int, skip: int, limit: int
-    ) -> tuple[list[CompanyMember], int]:
-        """
-        Get all members of a company (public endpoint).
-        """
+    async def get_company_members_paginated(
+        self,
+        company_id: int,
+        pagination: PaginationBaseSchema,
+    ) -> CompanyMembersListResponse:
         async with self._uow:
             try:
                 company: Company | None = await self._uow.companies.get_one_by_id(
@@ -28,16 +29,23 @@ class MemberService:
                 if not company:
                     raise NotFoundException(f"Company with id={company_id} not found")
 
-                members, total = await self._uow.company_member.get_members_by_company(
-                    company_id, skip, limit
+                async def db_fetch(skip: int, limit: int):
+                    return await self._uow.company_member.get_members_by_company(
+                        company_id, skip, limit
+                    )
+
+                return await paginate_query(
+                    db_fetch_func=db_fetch,
+                    pagination=pagination,
+                    response_schema=CompanyMembersListResponse,
+                    item_schema=CompanyMemberResponse,
                 )
-                return members, total
 
             except NotFoundException:
                 raise
             except Exception as e:
                 logger.error(
-                    f"Error fetching members for company {company_id}: {str(e)}"
+                    f"Error fetching paginated members for company {company_id}: {e}"
                 )
                 raise ServiceException("Failed to retrieve company members")
 

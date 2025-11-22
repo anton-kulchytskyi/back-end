@@ -274,11 +274,11 @@ async def test_get_admins_success(
 
     assert response.status_code == 200
     data = response.json()
-    assert "members" in data
-    assert "total" in data
+
+    assert "results" in data
     assert data["total"] >= 1
-    assert any(m["user_id"] == test_admin_user.id for m in data["members"])
-    assert all(m["role"] == Role.ADMIN.value for m in data["members"])
+    assert any(m["user_id"] == test_admin_user.id for m in data["results"])
+    assert all(m["role"] == Role.ADMIN.value for m in data["results"])
 
 
 @pytest.mark.asyncio
@@ -313,15 +313,16 @@ async def test_get_admins_pagination(
 
     # Test first page
     response = await client.get(
-        f"/companies/{company_with_admin.id}/admins?page=1&page_size=3",
+        f"/companies/{company_with_admin.id}/admins?page=1&limit=3",
         headers={"Authorization": f"Bearer {test_user_token}"},
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data["members"]) == 3
+
+    assert len(data["results"]) == 3
     assert data["page"] == 1
-    assert data["page_size"] == 3
+    assert data["limit"] == 3
     assert data["total"] >= 6  # 1 original + 5 new
 
 
@@ -332,6 +333,7 @@ async def test_get_admins_empty(
     test_company: Company,
 ):
     """Test getting admins when there are no admins (only owner)."""
+
     response = await client.get(
         f"/companies/{test_company.id}/admins",
         headers={"Authorization": f"Bearer {test_user_token}"},
@@ -339,8 +341,9 @@ async def test_get_admins_empty(
 
     assert response.status_code == 200
     data = response.json()
+
     assert data["total"] == 0
-    assert len(data["members"]) == 0
+    assert len(data["results"]) == 0
 
 
 @pytest.mark.asyncio
@@ -352,6 +355,7 @@ async def test_get_admins_member_can_view(
     db_session: AsyncSession,
 ):
     """Test regular member can view admins list."""
+
     # Add test_member_user as regular member to the company
     membership = CompanyMember(
         company_id=company_with_admin.id,
@@ -368,7 +372,9 @@ async def test_get_admins_member_can_view(
 
     assert response.status_code == 200
     data = response.json()
-    assert "members" in data
+
+    assert "results" in data
+    assert isinstance(data["results"], list)
 
 
 @pytest.mark.asyncio
@@ -502,7 +508,9 @@ async def test_multiple_admins_in_company(
 
     assert response.status_code == 200
     data = response.json()
+
     assert data["total"] >= 3
-    admin_ids = [m["user_id"] for m in data["members"]]
+    admin_ids = [m["user_id"] for m in data["results"]]
+
     for admin_id in admins_created:
         assert admin_id in admin_ids

@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 from app.enums.role import Role
+from app.schemas.pagination import PaginatedResponseBaseSchema
 
 
 class CompanyMemberResponse(BaseModel):
@@ -18,11 +19,7 @@ class CompanyMemberResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CompanyMembersListResponse(BaseModel):
-    """Paginated list of company members."""
+class CompanyMembersListResponse(PaginatedResponseBaseSchema[CompanyMemberResponse]):
+    """Unified paginated response for company members."""
 
-    members: list[CompanyMemberResponse]
-    total: int
-    page: int
-    page_size: int
-    total_pages: int
+    pass  # All fields inherited from pagination
