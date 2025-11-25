@@ -3,11 +3,10 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, relationship
 
 from app.core.database import Base
-from app.models.mixins import IDMixin, InvitationRequestMixin, TimestampMixin
+from app.models.base.mixins import IDMixin, InvitationRequestMixin, TimestampMixin
 
 if TYPE_CHECKING:
-    from app.models.company import Company
-    from app.models.user import User
+    from app.models import Company, User
 
 
 class Invitation(IDMixin, TimestampMixin, InvitationRequestMixin, Base):

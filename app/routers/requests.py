@@ -3,10 +3,10 @@
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.dependencies import get_current_user, get_request_service
-from app.enums.status import Status
-from app.models.user import User
-from app.schemas.pagination import PaginationBaseSchema
-from app.schemas.request import (
+from app.enums import Status
+from app.models import User
+from app.schemas import (
+    PaginationBaseSchema,
     RequestCreateRequest,
     RequestResponse,
     RequestsListResponse,

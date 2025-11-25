@@ -2,7 +2,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.models import User
 
 # ==================== AUTH0 MOCK TESTS ====================
 
@@ -39,7 +39,7 @@ async def test_auth0_token_creates_new_user(
     assert data["full_name"] == "Newauth0user"
     assert data["is_active"] is True
 
-    from app.db.user_repository import UserRepository
+    from app.db.user.user_repository import UserRepository
 
     user_repository = UserRepository(db_session)
 

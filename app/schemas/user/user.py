@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.schemas.pagination import PaginatedResponseBaseSchema
+from app.schemas.pagination.pagination import PaginatedResponseBaseSchema
 
 
 # --- 1. User schema (base) ---

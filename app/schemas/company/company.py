@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.pagination import PaginatedResponseBaseSchema
+from app.schemas.pagination.pagination import PaginatedResponseBaseSchema
 
 
 class CompanyCreateRequest(BaseModel):

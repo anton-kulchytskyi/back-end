@@ -1,12 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
-from app.enums.role import Role
-from app.enums.status import Status
-from app.models.company import Company
-from app.models.company_member import CompanyMember
-from app.models.invitation import Invitation
-from app.models.user import User
+from app.enums import Role, Status
+from app.models import Company, CompanyMember, Invitation, User
 
 
 @pytest.mark.asyncio

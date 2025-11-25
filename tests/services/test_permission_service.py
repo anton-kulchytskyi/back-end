@@ -3,10 +3,8 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import PermissionDeniedException
-from app.enums.role import Role
-from app.models.company import Company
-from app.models.company_member import CompanyMember
-from app.models.user import User
+from app.enums import Role
+from app.models import Company, CompanyMember, User
 from app.services.companies.permission_service import PermissionService
 
 

@@ -2,8 +2,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
-from app.schemas.company import CompanyCreateRequest
+from app.models import User
+from app.schemas import CompanyCreateRequest
 from app.services.companies.company_service import CompanyService
 from app.services.companies.permission_service import PermissionService
 

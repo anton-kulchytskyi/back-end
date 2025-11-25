@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import get_current_user, get_invitation_service
-from app.enums.status import Status
-from app.models.user import User
-from app.schemas.invitation import InvitationResponse, InvitationsListResponse
-from app.schemas.pagination import PaginationBaseSchema
+from app.enums import Status
+from app.models import User
+from app.schemas import (
+    InvitationResponse,
+    InvitationsListResponse,
+    PaginationBaseSchema,
+)
 from app.services.companies.invitation_service import InvitationService
 
 router = APIRouter()

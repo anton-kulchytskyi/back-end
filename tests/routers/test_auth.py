@@ -3,7 +3,7 @@ from datetime import timedelta
 import pytest
 from httpx import AsyncClient
 
-from app.models.user import User
+from app.models import User
 
 # ==================== REGISTRATION TESTS ====================
 

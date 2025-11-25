@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.base_repository import BaseRepository
-from app.enums.role import Role
-from app.models.company_member import CompanyMember
+from app.db.base.base_repository import BaseRepository
+from app.enums import Role
+from app.models import CompanyMember
 
 
 class CompanyMemberRepository(BaseRepository[CompanyMember]):

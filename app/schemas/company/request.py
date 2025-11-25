@@ -2,8 +2,8 @@
 
 from pydantic import BaseModel
 
-from app.schemas.base import InvitationRequestResponse
-from app.schemas.pagination import PaginatedResponseBaseSchema
+from app.schemas.company.invitation_request_base import InvitationRequestResponse
+from app.schemas.pagination.pagination import PaginatedResponseBaseSchema
 
 
 class RequestCreateRequest(BaseModel):

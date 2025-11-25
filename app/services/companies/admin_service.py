@@ -1,10 +1,13 @@
 from app.core.exceptions import BadRequestException, NotFoundException, ServiceException
 from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
-from app.enums.role import Role
-from app.models.company_member import CompanyMember
-from app.schemas.member import CompanyMemberResponse, CompanyMembersListResponse
-from app.schemas.pagination import PaginationBaseSchema
+from app.enums import Role
+from app.models import CompanyMember
+from app.schemas import (
+    CompanyMemberResponse,
+    CompanyMembersListResponse,
+    PaginationBaseSchema,
+)
 from app.services.companies.company_service import CompanyService
 from app.services.companies.permission_service import PermissionService
 from app.utils.pagination import paginate_query

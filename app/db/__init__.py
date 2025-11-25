@@ -1,8 +1,11 @@
-from app.db.company_member_repository import CompanyMemberRepository
-from app.db.company_repository import CompanyRepository
-from app.db.invitation_repository import InvitationRepository
-from app.db.request_repository import RequestRepository
-from app.db.user_repository import UserRepository
+from .company.company_member_repository import CompanyMemberRepository
+from .company.company_repository import CompanyRepository
+from .company.invitation_repository import InvitationRepository
+from .company.request_repository import RequestRepository
+from .quiz.answer_repository import QuizAnswerRepository
+from .quiz.question_repository import QuizQuestionRepository
+from .quiz.quiz_repository import QuizRepository
+from .user.user_repository import UserRepository
 
 __all__ = [
     "CompanyMemberRepository",
@@ -10,4 +13,7 @@ __all__ = [
     "InvitationRepository",
     "RequestRepository",
     "UserRepository",
+    "QuizRepository",
+    "QuizQuestionRepository",
+    "QuizAnswerRepository",
 ]

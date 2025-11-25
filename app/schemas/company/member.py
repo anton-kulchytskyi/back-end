@@ -2,8 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.enums.role import Role
-from app.schemas.pagination import PaginatedResponseBaseSchema
+from app.enums import Role
+from app.schemas.pagination.pagination import PaginatedResponseBaseSchema
 
 
 class CompanyMemberResponse(BaseModel):

@@ -6,16 +6,17 @@ from app.core.dependencies import (
     get_member_service,
     get_request_service,
 )
-from app.enums.status import Status
-from app.models.user import User
-from app.schemas.invitation import (
+from app.enums import Status
+from app.models import User
+from app.schemas import (
+    CompanyMembersListResponse,
     InvitationCreateRequest,
     InvitationResponse,
     InvitationsListResponse,
+    PaginationBaseSchema,
+    RequestResponse,
+    RequestsListResponse,
 )
-from app.schemas.member import CompanyMembersListResponse
-from app.schemas.pagination import PaginationBaseSchema
-from app.schemas.request import RequestResponse, RequestsListResponse
 from app.services.companies.invitation_service import InvitationService
 from app.services.companies.member_service import MemberService
 from app.services.companies.request_service import RequestService

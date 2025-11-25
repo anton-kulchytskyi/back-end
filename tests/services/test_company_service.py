@@ -3,11 +3,9 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException, PermissionDeniedException
-from app.enums.role import Role
-from app.models.company import Company
-from app.models.user import User
-from app.schemas.company import CompanyCreateRequest, CompanyUpdateRequest
-from app.schemas.pagination import PaginationBaseSchema
+from app.enums import Role
+from app.models import Company, User
+from app.schemas import CompanyCreateRequest, CompanyUpdateRequest, PaginationBaseSchema
 from app.services.companies.company_service import CompanyService
 from app.services.companies.permission_service import PermissionService
 

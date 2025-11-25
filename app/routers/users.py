@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, status
 
 from app.core.dependencies import get_current_user, get_user_service
-from app.models.user import User
-from app.schemas.pagination import PaginationBaseSchema
-from app.schemas.user import (
+from app.models import User
+from app.schemas import (
+    PaginationBaseSchema,
     SignUpRequest,
     UserDetailResponse,
     UsersListResponse,

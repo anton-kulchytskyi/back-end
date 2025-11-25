@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends
 
 from app.core.dependencies import get_admin_service, get_current_user
-from app.schemas.member import CompanyMemberResponse, CompanyMembersListResponse
-from app.schemas.pagination import PaginationBaseSchema
+from app.schemas import (
+    CompanyMemberResponse,
+    CompanyMembersListResponse,
+    PaginationBaseSchema,
+)
 
 router = APIRouter()
 

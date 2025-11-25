@@ -1,10 +1,8 @@
-from typing import Annotated
-
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.unit_of_work import AbstractUnitOfWork, SQLAlchemyUnitOfWork
-from app.models.user import User
+from app.models import User
 from app.services import (
     AdminService,
     AuthService,
@@ -12,6 +10,7 @@ from app.services import (
     InvitationService,
     MemberService,
     PermissionService,
+    QuizService,
     RequestService,
     UserService,
 )
@@ -76,12 +75,19 @@ def get_request_service(
     return RequestService(uow=uow, permission_service=permission_service)
 
 
+def get_quiz_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    permission_service: PermissionService = Depends(get_permission_service),
+) -> QuizService:
+    return QuizService(uow=uow, permission_service=permission_service)
+
+
 # HTTPBearer scheme for token authentication
 security = HTTPBearer()
 
 
 async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> User:
     """

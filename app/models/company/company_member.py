@@ -5,12 +5,11 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.enums.role import Role
-from app.models.mixins import IDMixin, TimestampMixin
+from app.enums import Role
+from app.models.base.mixins import IDMixin, TimestampMixin
 
 if TYPE_CHECKING:
-    from app.models.company import Company
-    from app.models.user import User
+    from app.models import Company, User
 
 
 class CompanyMember(IDMixin, TimestampMixin, Base):

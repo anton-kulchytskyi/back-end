@@ -11,9 +11,9 @@ from app.core.exceptions import (
 from app.core.logger import logger
 from app.core.security import hash_password
 from app.core.unit_of_work import AbstractUnitOfWork
-from app.models.user import User
-from app.schemas.pagination import PaginationBaseSchema
-from app.schemas.user import (
+from app.models import User
+from app.schemas import (
+    PaginationBaseSchema,
     SignUpRequest,
     UserDetailResponse,
     UsersListResponse,

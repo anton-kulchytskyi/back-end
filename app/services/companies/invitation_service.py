@@ -7,10 +7,10 @@ from app.core.exceptions import (
 )
 from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
-from app.enums.status import Status
-from app.models.invitation import Invitation
-from app.schemas.invitation import InvitationResponse, InvitationsListResponse
-from app.schemas.pagination import PaginationBaseSchema
+from app.enums import Status
+from app.models import Invitation
+from app.schemas.company.invitation import InvitationResponse, InvitationsListResponse
+from app.schemas.pagination.pagination import PaginationBaseSchema
 from app.services.companies.base_membership_service import BaseMembershipService
 from app.services.companies.permission_service import PermissionService
 from app.utils.pagination import paginate_query

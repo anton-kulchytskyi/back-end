@@ -4,13 +4,10 @@ from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.models.mixins import IDMixin, TimestampMixin
+from app.models.base.mixins import IDMixin, TimestampMixin
 
 if TYPE_CHECKING:
-    from app.models.company import Company
-    from app.models.company_member import CompanyMember
-    from app.models.invitation import Invitation
-    from app.models.request import Request
+    from app.models import Company, CompanyMember, Invitation, QuizAttempt, Request
 
 
 class User(IDMixin, TimestampMixin, Base):
@@ -31,6 +28,9 @@ class User(IDMixin, TimestampMixin, Base):
     )
     requests: Mapped[list["Request"]] = relationship(
         "Request", back_populates="user", cascade="all, delete-orphan"
+    )
+    quiz_attempts: Mapped[list["QuizAttempt"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

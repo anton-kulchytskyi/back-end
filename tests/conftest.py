@@ -11,11 +11,9 @@ from sqlalchemy.pool import NullPool
 from app.core.database import Base
 from app.core.dependencies import get_auth_service, get_uow, get_user_service
 from app.core.unit_of_work import AbstractUnitOfWork
-from app.enums.role import Role
+from app.enums import Role
 from app.main import app
-from app.models.company import Company
-from app.models.company_member import CompanyMember
-from app.models.user import User
+from app.models import Company, CompanyMember, User
 from app.services.users.user_service import UserService
 
 # ==================== TEST DATABASE SETUP ====================
@@ -40,6 +38,9 @@ class TestSQLAlchemyUnitOfWork(AbstractUnitOfWork):
             CompanyMemberRepository,
             CompanyRepository,
             InvitationRepository,
+            QuizAnswerRepository,
+            QuizQuestionRepository,
+            QuizRepository,
             RequestRepository,
             UserRepository,
         )
@@ -47,6 +48,9 @@ class TestSQLAlchemyUnitOfWork(AbstractUnitOfWork):
         self.company_member = CompanyMemberRepository(self.session)
         self.companies = CompanyRepository(self.session)
         self.invitations = InvitationRepository(self.session)
+        self.quiz_answer = QuizAnswerRepository(session=self.session)
+        self.quiz_question = QuizQuestionRepository(session=self.session)
+        self.quiz = QuizRepository(session=self.session)
         self.requests = RequestRepository(self.session)
         self.users = UserRepository(self.session)
         return self
