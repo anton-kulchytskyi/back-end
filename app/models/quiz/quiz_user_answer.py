@@ -39,8 +39,8 @@ class QuizUserAnswer(IDMixin, TimestampMixin, Base):
     question: Mapped["QuizQuestion"] = relationship(back_populates="user_answers")
     answer: Mapped["QuizAnswer"] = relationship(back_populates="user_answers")
 
-    __table_args__ = UniqueConstraint(
-        "attempt_id", "question_id", name="uq_attempt_question"
+    __table_args__ = (
+        UniqueConstraint("attempt_id", "question_id", name="uq_attempt_question"),
     )
 
     def __repr__(self) -> str:
