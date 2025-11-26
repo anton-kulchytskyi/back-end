@@ -1,7 +1,11 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 
 from app.core.dependencies import get_admin_service, get_current_user
-from app.schemas.member import CompanyMemberResponse, CompanyMembersListResponse
+from app.schemas import (
+    CompanyMemberResponse,
+    CompanyMembersListResponse,
+    PaginationBaseSchema,
+)
 
 router = APIRouter()
 
@@ -14,31 +18,19 @@ router = APIRouter()
 )
 async def list_admins(
     company_id: int,
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
+    pagination: PaginationBaseSchema = Depends(),
     admin_service=Depends(get_admin_service),
     current_user=Depends(get_current_user),
 ):
     """
     Get paginated list of company administrators.
 
-    **Permissions**: Member
+    Permissions: Any company member
     """
-    skip = (page - 1) * page_size
-    admins, total = await admin_service.get_admins(
+    return await admin_service.get_admins_paginated(
         current_user_id=current_user.id,
         company_id=company_id,
-        skip=skip,
-        limit=page_size,
-    )
-    total_pages = (total + page_size - 1) // page_size
-
-    return CompanyMembersListResponse(
-        members=admins,
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=total_pages,
+        pagination=pagination,
     )
 
 

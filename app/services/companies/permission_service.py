@@ -1,7 +1,7 @@
 from app.core.exceptions import PermissionDeniedException
 from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
-from app.enums.role import Role
+from app.enums import Role
 
 
 class PermissionService:

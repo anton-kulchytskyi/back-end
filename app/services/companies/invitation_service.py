@@ -7,10 +7,13 @@ from app.core.exceptions import (
 )
 from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
-from app.enums.status import Status
-from app.models.invitation import Invitation
+from app.enums import Status
+from app.models import Invitation
+from app.schemas.company.invitation import InvitationResponse, InvitationsListResponse
+from app.schemas.pagination.pagination import PaginationBaseSchema
 from app.services.companies.base_membership_service import BaseMembershipService
 from app.services.companies.permission_service import PermissionService
+from app.utils.pagination import paginate_query
 
 
 class InvitationService(BaseMembershipService):
@@ -118,33 +121,6 @@ class InvitationService(BaseMembershipService):
                 logger.error(f"Error canceling invitation {invitation_id}: {str(e)}")
                 raise ServiceException("Failed to cancel invitation")
 
-    async def get_company_invitations(
-        self,
-        company_id: int,
-        owner_id: int,
-        skip: int,
-        limit: int,
-        status: Status | None = None,
-    ) -> tuple[list[Invitation], int]:
-        """
-        Owner views sent invitations. (Read-only)
-        """
-        await self._permission_service.require_owner(company_id, owner_id)
-
-        async with self._uow:
-            return await self._uow.invitations.get_by_company(
-                company_id, skip, limit, status
-            )
-
-    async def get_user_invitations(
-        self, user_id: int, skip: int, limit: int, status: Status | None = None
-    ) -> tuple[list[Invitation], int]:
-        """
-        User views received invitations. (Read-only)
-        """
-        async with self._uow:
-            return await self._uow.invitations.get_by_user(user_id, skip, limit, status)
-
     async def accept_invitation(self, invitation_id: int, user_id: int) -> Invitation:
         """
         User accepts invitation.
@@ -216,3 +192,55 @@ class InvitationService(BaseMembershipService):
             except Exception as e:
                 logger.error(f"Error declining invitation {invitation_id}: {str(e)}")
                 raise ServiceException("Failed to decline invitation")
+
+    async def get_company_invitations_paginated(
+        self,
+        company_id: int,
+        owner_id: int,
+        pagination: PaginationBaseSchema,
+        status: Status | None = None,
+    ) -> InvitationsListResponse:
+        """
+        Owner views invitations sent by company (paginated).
+        """
+        await self._permission_service.require_owner(company_id, owner_id)
+
+        async with self._uow:
+
+            async def db_fetch(skip: int, limit: int):
+                return await self._uow.invitations.get_by_company(
+                    company_id,
+                    skip=skip,
+                    limit=limit,
+                    status=status,
+                )
+
+            return await paginate_query(
+                db_fetch_func=db_fetch,
+                pagination=pagination,
+                response_schema=InvitationsListResponse,
+                item_schema=InvitationResponse,
+            )
+
+    async def get_user_invitations_paginated(
+        self,
+        user_id: int,
+        pagination: PaginationBaseSchema,
+        status: Status | None = None,
+    ) -> InvitationsListResponse:
+        """
+        User views invitations they received (paginated).
+        """
+        async with self._uow:
+
+            async def db_fetch(skip: int, limit: int):
+                return await self._uow.invitations.get_by_user(
+                    user_id, skip=skip, limit=limit, status=status
+                )
+
+            return await paginate_query(
+                db_fetch_func=db_fetch,
+                pagination=pagination,
+                response_schema=InvitationsListResponse,
+                item_schema=InvitationResponse,
+            )

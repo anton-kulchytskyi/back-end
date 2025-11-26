@@ -8,11 +8,8 @@ from app.core.exceptions import (
 )
 from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
-from app.enums.role import Role
-from app.enums.status import Status
-from app.models.company_member import CompanyMember
-from app.models.invitation import Invitation
-from app.models.request import Request
+from app.enums import Role, Status
+from app.models import CompanyMember, Invitation, Request
 from app.services.companies.permission_service import PermissionService
 
 

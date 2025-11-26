@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from app.schemas.pagination.pagination import PaginatedResponseBaseSchema
+
 
 # --- 1. User schema (base) ---
 class User(BaseModel):
@@ -29,16 +31,7 @@ class UserUpdateRequest(BaseModel):
     password: str | None = Field(None, min_length=8, max_length=100)
 
 
-# --- 5. UsersList Response ---
-class UsersListResponse(BaseModel):
-    users: list["UserDetailResponse"]
-    total: int
-    page: int = 1
-    page_size: int = 10
-    total_pages: int
-
-
-# --- 6. UserDetail Response ---
+# --- 5. UserDetail Response ---
 class UserDetailResponse(BaseModel):
     id: int
     email: EmailStr
@@ -48,3 +41,10 @@ class UserDetailResponse(BaseModel):
     updated_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# --- 6. UsersList Response ---
+class UsersListResponse(PaginatedResponseBaseSchema[UserDetailResponse]):
+    """Unified paginated response for company members."""
+
+    pass  # All fields inherited from pagination

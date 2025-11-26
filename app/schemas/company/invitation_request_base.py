@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.enums.status import Status
+from app.enums import Status
 
 
 class InvitationRequestBase(BaseModel):

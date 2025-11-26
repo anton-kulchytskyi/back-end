@@ -4,7 +4,7 @@ from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.enums.status import Status
+from app.enums import Status
 
 
 class TimestampMixin:

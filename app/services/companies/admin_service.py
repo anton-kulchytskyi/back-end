@@ -1,10 +1,16 @@
 from app.core.exceptions import BadRequestException, NotFoundException, ServiceException
 from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
-from app.enums.role import Role
-from app.models.company_member import CompanyMember
+from app.enums import Role
+from app.models import CompanyMember
+from app.schemas import (
+    CompanyMemberResponse,
+    CompanyMembersListResponse,
+    PaginationBaseSchema,
+)
 from app.services.companies.company_service import CompanyService
 from app.services.companies.permission_service import PermissionService
+from app.utils.pagination import paginate_query
 
 
 class AdminService:
@@ -120,28 +126,30 @@ class AdminService:
             action="demoted from admin",
         )
 
-    async def get_admins(
+    async def get_admins_paginated(
         self,
         current_user_id: int,
         company_id: int,
-        skip: int,
-        limit: int,
-    ) -> tuple[list[CompanyMember], int]:
+        pagination: PaginationBaseSchema,
+    ) -> CompanyMembersListResponse:
         """
-        Get all administrators for a company.
+        Get all administrators for a company using unified pagination.
         Any company member can view admins.
         """
         await self._verify_member_access(company_id, current_user_id)
 
         async with self._uow:
-            try:
-                admins, total = await self._uow.company_member.get_admins_by_company(
-                    company_id, skip, limit
-                )
-                return admins, total
 
-            except Exception as e:
-                logger.error(
-                    f"Error fetching admins for company {company_id}: {str(e)}"
+            async def db_fetch(skip: int, limit: int):
+                return await self._uow.company_member.get_admins_by_company(
+                    company_id=company_id,
+                    skip=skip,
+                    limit=limit,
                 )
-                raise ServiceException("Failed to retrieve company admins")
+
+            return await paginate_query(
+                db_fetch_func=db_fetch,
+                pagination=pagination,
+                response_schema=CompanyMembersListResponse,
+                item_schema=CompanyMemberResponse,
+            )

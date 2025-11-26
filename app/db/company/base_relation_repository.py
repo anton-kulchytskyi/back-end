@@ -2,8 +2,8 @@ from typing import TypeVar
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.base_repository import BaseRepository
-from app.enums.status import Status
+from app.db.base.base_repository import BaseRepository
+from app.enums import Status
 
 T = TypeVar("T")
 

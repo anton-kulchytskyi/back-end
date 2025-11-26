@@ -1,9 +1,13 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import get_current_user, get_invitation_service
-from app.enums.status import Status
-from app.models.user import User
-from app.schemas.invitation import InvitationResponse, InvitationsListResponse
+from app.enums import Status
+from app.models import User
+from app.schemas import (
+    InvitationResponse,
+    InvitationsListResponse,
+    PaginationBaseSchema,
+)
 from app.services.companies.invitation_service import InvitationService
 
 router = APIRouter()
@@ -18,8 +22,7 @@ router = APIRouter()
     summary="User views received invitations",
 )
 async def get_my_invitations(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
+    pagination: PaginationBaseSchema = Depends(),
     status_filter: Status | None = Query(None, alias="status"),
     current_user: User = Depends(get_current_user),
     invitation_service: InvitationService = Depends(get_invitation_service),
@@ -33,18 +36,10 @@ async def get_my_invitations(
 
     **Permissions**: Authenticated user
     """
-    skip = (page - 1) * page_size
-
-    invitations, total = await invitation_service.get_user_invitations(
-        current_user.id, skip, page_size, status_filter
-    )
-
-    return InvitationsListResponse(
-        invitations=[InvitationResponse.model_validate(inv) for inv in invitations],
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=(total + page_size - 1) // page_size,
+    return await invitation_service.get_user_invitations_paginated(
+        user_id=current_user.id,
+        pagination=pagination,
+        status=status_filter,
     )
 
 

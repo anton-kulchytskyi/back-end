@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.base_relation_repository import BaseRelationRepository
-from app.models.invitation import Invitation
+from app.db.company.base_relation_repository import BaseRelationRepository
+from app.models import Invitation
 
 
 class InvitationRepository(BaseRelationRepository[Invitation]):

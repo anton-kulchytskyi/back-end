@@ -2,7 +2,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.models import User
 
 
 @pytest.mark.asyncio
@@ -24,19 +24,27 @@ async def test_get_user_not_found(client: AsyncClient):
 async def test_get_all_users(client: AsyncClient, test_user: User):
     response = await client.get("/users")
     assert response.status_code == 200
+
     data = response.json()
-    assert "users" in data
+
+    assert "results" in data
+    assert isinstance(data["results"], list)
+
     assert "total" in data
     assert data["total"] >= 1
 
 
 @pytest.mark.asyncio
 async def test_get_all_users_pagination(client: AsyncClient, test_user: User):
-    response = await client.get("/users?page=1&page_size=5")
+    response = await client.get("/users?page=1&limit=5")
     assert response.status_code == 200
+
     data = response.json()
+
     assert data["page"] == 1
-    assert data["page_size"] == 5
+    assert data["limit"] == 5
+    assert "results" in data
+    assert isinstance(data["results"], list)
 
 
 @pytest.mark.asyncio

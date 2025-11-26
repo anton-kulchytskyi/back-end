@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
-from app.models.company import Company
+from app.models import Company
 
 
 @pytest.mark.asyncio
@@ -35,4 +35,8 @@ async def test_get_my_requests_route(client: AsyncClient, test_user_token):
         headers={"Authorization": f"Bearer {test_user_token}"},
     )
     assert response.status_code == 200
-    assert "requests" in response.json()
+
+    data = response.json()
+
+    assert "results" in data
+    assert isinstance(data["results"], list)

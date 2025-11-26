@@ -1,11 +1,8 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enums.role import Role
-from app.enums.status import Status
-from app.models.company import Company
-from app.models.company_member import CompanyMember
-from app.models.user import User
+from app.enums import Role, Status
+from app.models import Company, CompanyMember, User
 from app.services.companies.permission_service import PermissionService
 from app.services.companies.request_service import RequestService
 
@@ -18,7 +15,7 @@ async def test_create_request_success(db_session: AsyncSession, unit_of_work):
     user = User(email="u@test.com", full_name="User", hashed_password="123")
 
     db_session.add(user)
-    await db_session.flush()  # щоб user.id був доступний
+    await db_session.flush()
 
     company = Company(
         name="CompX",

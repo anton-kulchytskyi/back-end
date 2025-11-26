@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.pagination.pagination import PaginatedResponseBaseSchema
+
 
 class CompanyCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -26,9 +28,7 @@ class CompanyResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CompaniesListResponse(BaseModel):
-    companies: list[CompanyResponse]
-    total: int
-    page: int = 1
-    page_size: int = 10
-    total_pages: int
+class CompaniesListResponse(PaginatedResponseBaseSchema[CompanyResponse]):
+    """Unified paginated response for companies."""
+
+    pass

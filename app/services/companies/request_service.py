@@ -7,10 +7,12 @@ from app.core.exceptions import (
 )
 from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
-from app.enums.status import Status
-from app.models.request import Request
+from app.enums import Status
+from app.models import Request
+from app.schemas import PaginationBaseSchema, RequestResponse, RequestsListResponse
 from app.services.companies.base_membership_service import BaseMembershipService
 from app.services.companies.permission_service import PermissionService
+from app.utils.pagination import paginate_query
 
 
 class RequestService(BaseMembershipService):
@@ -109,33 +111,6 @@ class RequestService(BaseMembershipService):
                 logger.error(f"Error canceling request {request_id}: {str(e)}")
                 raise ServiceException("Failed to cancel request")
 
-    async def get_user_requests(
-        self, user_id: int, skip: int, limit: int, status: Status | None = None
-    ) -> tuple[list[Request], int]:
-        """
-        User views sent requests. (Read-only)
-        """
-        async with self._uow:
-            return await self._uow.requests.get_by_user(user_id, skip, limit, status)
-
-    async def get_company_requests(
-        self,
-        company_id: int,
-        owner_id: int,
-        skip: int,
-        limit: int,
-        status: Status | None = None,
-    ) -> tuple[list[Request], int]:
-        """
-        Owner views requests to company. (Read-only)
-        """
-        await self._permission_service.require_owner(company_id, owner_id)
-
-        async with self._uow:
-            return await self._uow.requests.get_by_company(
-                company_id, skip, limit, status
-            )
-
     async def accept_request(
         self, request_id: int, company_id: int, owner_id: int
     ) -> Request:
@@ -214,3 +189,48 @@ class RequestService(BaseMembershipService):
             except Exception as e:
                 logger.error(f"Error declining request {request_id}: {str(e)}")
                 raise ServiceException("Failed to decline request")
+
+    async def get_user_requests_paginated(
+        self,
+        user_id: int,
+        pagination: PaginationBaseSchema,
+        status: Status | None = None,
+    ) -> RequestsListResponse:
+        """User views the requests they created."""
+        async with self._uow:
+
+            async def db_fetch(skip: int, limit: int):
+                return await self._uow.requests.get_by_user(
+                    user_id, skip=skip, limit=limit, status=status
+                )
+
+            return await paginate_query(
+                db_fetch_func=db_fetch,
+                pagination=pagination,
+                response_schema=RequestsListResponse,
+                item_schema=RequestResponse,
+            )
+
+    async def get_company_requests_paginated(
+        self,
+        company_id: int,
+        owner_id: int,
+        pagination: PaginationBaseSchema,
+        status: Status | None = None,
+    ) -> RequestsListResponse:
+        """Owner views membership requests to their company."""
+        await self._permission_service.require_owner(company_id, owner_id)
+
+        async with self._uow:
+
+            async def db_fetch(skip: int, limit: int):
+                return await self._uow.requests.get_by_company(
+                    company_id, skip=skip, limit=limit, status=status
+                )
+
+            return await paginate_query(
+                db_fetch_func=db_fetch,
+                pagination=pagination,
+                response_schema=RequestsListResponse,
+                item_schema=RequestResponse,
+            )

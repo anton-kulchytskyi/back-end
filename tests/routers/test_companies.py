@@ -2,8 +2,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
-from app.schemas.company import CompanyCreateRequest
+from app.models import User
+from app.schemas import CompanyCreateRequest
 from app.services.companies.company_service import CompanyService
 from app.services.companies.permission_service import PermissionService
 
@@ -44,14 +44,15 @@ async def test_get_companies_list(
             headers={"Authorization": f"Bearer {test_user_token}"},
         )
 
-    response = await client.get("/companies?page=1&page_size=10")
+    response = await client.get("/companies?page=1&limit=10")
     assert response.status_code == 200
 
     data = response.json()
+
     assert data["total"] == 3
-    assert len(data["companies"]) == 3
+    assert len(data["results"]) == 3
     assert data["page"] == 1
-    assert data["page_size"] == 10
+    assert data["limit"] == 10
 
 
 @pytest.mark.asyncio
@@ -63,11 +64,11 @@ async def test_get_companies_pagination(client: AsyncClient, test_user_token: st
             headers={"Authorization": f"Bearer {test_user_token}"},
         )
 
-    response = await client.get("/companies?page=1&page_size=2")
+    response = await client.get("/companies?page=1&limit=2")
     data = response.json()
 
     assert data["total"] == 5
-    assert len(data["companies"]) == 2
+    assert len(data["results"]) == 2
     assert data["total_pages"] == 3
 
 
@@ -89,6 +90,7 @@ async def test_get_companies_only_visible(
     )
     hidden_id = resp2.json()["id"]
 
+    # Hide second company
     await client.put(
         f"/companies/{hidden_id}",
         json={"is_visible": False},
@@ -99,8 +101,8 @@ async def test_get_companies_only_visible(
     data = response.json()
 
     assert data["total"] == 1
-    assert len(data["companies"]) == 1
-    assert data["companies"][0]["id"] == visible_id
+    assert len(data["results"]) == 1
+    assert data["results"][0]["id"] == visible_id
 
 
 @pytest.mark.asyncio

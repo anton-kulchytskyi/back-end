@@ -4,9 +4,13 @@ from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.dependencies import get_auth_service, get_current_user, get_user_service
-from app.models.user import User
-from app.schemas.auth import RefreshTokenRequest, TokenResponse
-from app.schemas.user import SignUpRequest, UserDetailResponse
+from app.models import User
+from app.schemas import (
+    RefreshTokenRequest,
+    SignUpRequest,
+    TokenResponse,
+    UserDetailResponse,
+)
 from app.services.users.auth_service import AuthService
 from app.services.users.user_service import UserService
 

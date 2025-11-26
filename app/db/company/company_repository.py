@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.base_repository import BaseRepository
-from app.models.company import Company
+from app.db.base.base_repository import BaseRepository
+from app.models import Company
 
 
 class CompanyRepository(BaseRepository[Company]):

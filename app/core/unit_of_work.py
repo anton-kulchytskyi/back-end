@@ -5,6 +5,9 @@ from app.db import (
     CompanyMemberRepository,
     CompanyRepository,
     InvitationRepository,
+    QuizAnswerRepository,
+    QuizQuestionRepository,
+    QuizRepository,
     RequestRepository,
     UserRepository,
 )
@@ -14,6 +17,9 @@ class AbstractUnitOfWork(ABC):
     company_member: CompanyMemberRepository
     companies: CompanyRepository
     invitations: InvitationRepository
+    quiz_answer: QuizAnswerRepository
+    quiz_question: QuizQuestionRepository
+    quiz: QuizRepository
     requests: RequestRepository
     users: UserRepository
 
@@ -44,6 +50,9 @@ class SQLAlchemyUnitOfWork(AbstractUnitOfWork):
         self.company_member = CompanyMemberRepository(session=self.session)
         self.companies = CompanyRepository(session=self.session)
         self.invitations = InvitationRepository(session=self.session)
+        self.quiz_answer = QuizAnswerRepository(session=self.session)
+        self.quiz_question = QuizQuestionRepository(session=self.session)
+        self.quiz = QuizRepository(session=self.session)
         self.requests = RequestRepository(session=self.session)
         self.users = UserRepository(session=self.session)
 
