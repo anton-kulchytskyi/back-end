@@ -6,9 +6,14 @@ from app.core.exceptions import (
 from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
 from app.models import Quiz, QuizAnswer, QuizQuestion, User
-from app.schemas import QuizCreateRequest, QuizQuestionCreateRequest, QuizUpdateRequest
-from app.schemas.pagination.pagination import PaginationBaseSchema
-from app.schemas.quiz.quiz import QuizResponse, QuizzesListResponse
+from app.schemas import (
+    PaginationBaseSchema,
+    QuizCreateRequest,
+    QuizQuestionCreateRequest,
+    QuizResponse,
+    QuizUpdateRequest,
+    QuizzesListResponse,
+)
 from app.services import PermissionService
 from app.utils.nested import replace_children
 from app.utils.pagination import paginate_query

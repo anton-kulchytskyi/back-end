@@ -4,13 +4,15 @@ from app.routers.auth import router as auth_router
 from app.routers.companies.admins import router as company_admins_router
 from app.routers.companies.companies import router as companies_router
 from app.routers.companies.company_actions import router as company_actions_router
-from app.routers.companies.qiuzzes import router as quizzes_router
 from app.routers.health import router as health_router
 from app.routers.invitations import router as invitations_router
+from app.routers.quizzes.qiuzzes import router as quizzes_router
+from app.routers.quizzes.quiz_attempts import router as quiz_attempt_router
 from app.routers.requests import router as requests_router
 from app.routers.users import router as users_router
 
 router = APIRouter()
+
 
 # Register routers here
 router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
@@ -25,6 +27,9 @@ router.include_router(
 )
 router.include_router(
     quizzes_router, prefix="/companies/{company_id}/quizzes", tags=["Quizzes"]
+)
+router.include_router(
+    quiz_attempt_router, prefix="/quiz-attempts", tags=["Quiz Attempts"]
 )
 router.include_router(health_router, prefix="", tags=["Health"])
 router.include_router(invitations_router, prefix="/invitations", tags=["Invitations"])

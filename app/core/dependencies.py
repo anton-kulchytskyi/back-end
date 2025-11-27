@@ -10,6 +10,7 @@ from app.services import (
     InvitationService,
     MemberService,
     PermissionService,
+    QuizAttemptService,
     QuizService,
     RequestService,
     UserService,
@@ -80,6 +81,16 @@ def get_quiz_service(
     permission_service: PermissionService = Depends(get_permission_service),
 ) -> QuizService:
     return QuizService(uow=uow, permission_service=permission_service)
+
+
+def get_quiz_attempt_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    permission_service: PermissionService = Depends(get_permission_service),
+    quiz_service: QuizService = Depends(get_quiz_service),
+) -> QuizAttemptService:
+    return QuizAttemptService(
+        uow=uow, permission_service=permission_service, quiz_service=quiz_service
+    )
 
 
 # HTTPBearer scheme for token authentication
