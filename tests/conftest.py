@@ -39,8 +39,10 @@ class TestSQLAlchemyUnitOfWork(AbstractUnitOfWork):
             CompanyRepository,
             InvitationRepository,
             QuizAnswerRepository,
+            QuizAttemptRepository,
             QuizQuestionRepository,
             QuizRepository,
+            QuizUserAnswerRepository,
             RequestRepository,
             UserRepository,
         )
@@ -53,6 +55,8 @@ class TestSQLAlchemyUnitOfWork(AbstractUnitOfWork):
         self.quiz = QuizRepository(session=self.session)
         self.requests = RequestRepository(self.session)
         self.users = UserRepository(self.session)
+        self.quiz_attempt = QuizAttemptRepository(self.session)
+        self.quiz_user_answer = QuizUserAnswerRepository(self.session)
         return self
 
     async def __aexit__(self, exc_type, exc, tb):

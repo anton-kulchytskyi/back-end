@@ -34,22 +34,9 @@ class QuizRepository(BaseRepository[Quiz]):
             options=[
                 selectinload(Quiz.questions).selectinload(QuizQuestion.answers),
                 selectinload(Quiz.attempts),
+                selectinload(Quiz.company),
             ],
         )
-
-    async def get_by_id_and_company(
-        self, quiz_id: int, company_id: int
-    ) -> Optional[Quiz]:
-        """Retrieve quiz only if it belongs to the specified company."""
-
-        return await self.get_one_by_filters(
-            Quiz.id == quiz_id, Quiz.company_id == company_id
-        )
-
-    async def count_by_company(self, company_id: int) -> int:
-        """Count total quizzes in a company."""
-
-        return await self.count_by_filters(Quiz.company_id == company_id)
 
     async def refresh_after_create_or_update(self, quiz: Quiz) -> Quiz:
         """Refreshes a persistent Quiz object and ensures full eager loading."""

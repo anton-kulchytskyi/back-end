@@ -62,13 +62,6 @@ async def get_company_quizzes(
 ) -> QuizzesListResponse:
     """
     Get paginated list of quizzes for a company.
-
-    **Query Parameters:**
-    - `page`: Page number (default: 1)
-    - `limit`: Items per page (default: 10)
-
-    **Returns:**
-    - Paginated list of quizzes (without questions for performance)
     """
     return await quiz_service.get_company_quizzes_paginated(
         company_id=company_id,

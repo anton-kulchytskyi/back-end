@@ -13,6 +13,12 @@ from .company.member import CompanyMemberResponse, CompanyMembersListResponse
 from .company.request import RequestCreateRequest, RequestResponse, RequestsListResponse
 from .pagination.pagination import PaginatedResponseBaseSchema, PaginationBaseSchema
 from .quiz.answer import QuizAnswerCreateRequest
+from .quiz.attempt import (
+    QuizAttemptResponse,
+    QuizAttemptsListResponse,
+    QuizAttemptSubmitRequest,
+    UserQuizStatisticsResponse,
+)
 from .quiz.question import QuizQuestionCreateRequest
 from .quiz.quiz import (
     QuizCreateRequest,
@@ -74,4 +80,8 @@ __all__ = [
     "QuizAnswerCreateRequest",
     "QuizUserAnswerCreateRequest",
     "QuizUserAnswerResponse",
+    "QuizAttemptResponse",
+    "QuizAttemptsListResponse",
+    "QuizAttemptSubmitRequest",
+    "UserQuizStatisticsResponse",
 ]
