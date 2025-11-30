@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from app.core.exceptions import (
     BadRequestException,
     NotFoundException,
@@ -12,9 +14,11 @@ from app.schemas import (
     QuizAttemptResponse,
     QuizAttemptsListResponse,
     QuizAttemptSubmitRequest,
+    RedisQuizAnswerData,
     UserQuizStatisticsResponse,
 )
 from app.services.companies.permission_service import PermissionService
+from app.services.quiz.quiz_redis_service import RedisQuizService
 from app.services.quiz.quiz_service import QuizService
 from app.utils.pagination import paginate_query
 
@@ -27,10 +31,12 @@ class QuizAttemptService:
         uow: AbstractUnitOfWork,
         permission_service: PermissionService,
         quiz_service: QuizService,
+        redis_quiz_service: RedisQuizService,
     ):
         self._uow = uow
         self._permisson_service = permission_service
         self._quiz_service = quiz_service
+        self._redis_quiz_service = redis_quiz_service
 
     async def submit_quiz_attempt(
         self,
@@ -71,6 +77,7 @@ class QuizAttemptService:
                 )
 
                 answers_data = []
+                redis_payloads = []
                 for user_answer in data.answers:
                     question = self._find_question(quiz, user_answer.question_id)
                     selected_answer = self._find_answer(question, user_answer.answer_id)
@@ -84,6 +91,19 @@ class QuizAttemptService:
                         }
                     )
 
+                    redis_payloads.append(
+                        RedisQuizAnswerData(
+                            user_id=current_user.id,
+                            company_id=quiz.company_id,
+                            quiz_id=quiz_id,
+                            question_id=user_answer.question_id,
+                            answer_id=user_answer.answer_id,
+                            is_correct=selected_answer.is_correct,
+                            attempt_id=attempt.id,
+                            answered_at=datetime.now(timezone.utc),
+                        )
+                    )
+
                 await self._uow.quiz_user_answer.bulk_create_answers(answers_data)
 
                 await self._uow.session.refresh(attempt, ["user_answers"])
@@ -94,6 +114,10 @@ class QuizAttemptService:
                 completed_attempt = await self._uow.quiz_attempt.get_with_details(
                     attempt.id
                 )
+
+                if self._redis_quiz_service:
+                    for p in redis_payloads:
+                        await self._redis_quiz_service.save_answer(p)
 
                 return QuizAttemptResponse.model_validate(completed_attempt)
 
