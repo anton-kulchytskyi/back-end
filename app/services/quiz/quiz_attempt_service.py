@@ -4,6 +4,7 @@ from app.core.exceptions import (
     BadRequestException,
     NotFoundException,
     PermissionDeniedException,
+    RedisException,
     ServiceException,
 )
 from app.core.logger import logger
@@ -77,7 +78,6 @@ class QuizAttemptService:
                 )
 
                 answers_data = []
-                redis_payloads = []
                 for user_answer in data.answers:
                     question = self._find_question(quiz, user_answer.question_id)
                     selected_answer = self._find_answer(question, user_answer.answer_id)
@@ -91,23 +91,20 @@ class QuizAttemptService:
                         }
                     )
 
-                    redis_payloads.append(
-                        RedisQuizAnswerData(
-                            user_id=current_user.id,
-                            company_id=quiz.company_id,
-                            quiz_id=quiz_id,
-                            question_id=user_answer.question_id,
-                            answer_id=user_answer.answer_id,
-                            is_correct=selected_answer.is_correct,
-                            attempt_id=attempt.id,
-                            answered_at=datetime.now(timezone.utc),
-                        )
-                    )
-
                 await self._uow.quiz_user_answer.bulk_create_answers(answers_data)
 
                 await self._uow.session.refresh(attempt, ["user_answers"])
                 attempt.mark_completed()
+
+                redis_payloads = self._build_redis_payloads(
+                    user_id=current_user.id,
+                    company_id=quiz.company_id,
+                    quiz_id=quiz_id,
+                    attempt_id=attempt.id,
+                    answers_data=answers_data,
+                )
+
+                await self._redis_quiz_service.save_answers_bulk(redis_payloads)
 
                 await self._uow.commit()
 
@@ -115,16 +112,13 @@ class QuizAttemptService:
                     attempt.id
                 )
 
-                if self._redis_quiz_service:
-                    for p in redis_payloads:
-                        await self._redis_quiz_service.save_answer(p)
-
                 return QuizAttemptResponse.model_validate(completed_attempt)
 
             except (
                 NotFoundException,
                 PermissionDeniedException,
                 BadRequestException,
+                RedisException,
             ):
                 raise
             except Exception as e:
@@ -276,3 +270,34 @@ class QuizAttemptService:
                 f"Answer {answer_id} not found in question {question.id}"
             )
         return answer
+
+    def _build_redis_payloads(
+        self,
+        user_id: int,
+        company_id: int,
+        quiz_id: int,
+        attempt_id: int,
+        answers_data: list[dict],
+    ) -> list[RedisQuizAnswerData]:
+        """
+        Build Redis payloads from answers data.
+
+        Returns:
+            List of RedisQuizAnswerData ready for Redis storage
+        """
+
+        timestamp = datetime.now(timezone.utc)
+
+        return [
+            RedisQuizAnswerData(
+                user_id=user_id,
+                company_id=company_id,
+                quiz_id=quiz_id,
+                question_id=answer["question_id"],
+                answer_id=answer["answer_id"],
+                is_correct=answer["is_correct"],
+                attempt_id=attempt_id,
+                answered_at=timestamp,
+            )
+            for answer in answers_data
+        ]

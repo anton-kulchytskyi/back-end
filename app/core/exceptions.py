@@ -60,3 +60,15 @@ class ServiceException(BaseAppException):
 
     def __init__(self, detail: str = "Internal server error"):
         super().__init__(status.HTTP_500_INTERNAL_SERVER_ERROR, detail)
+
+
+class RedisException(ServiceException):
+    """
+    Redis operation failed (500).
+
+    Wraps redis-py exceptions to provide consistent error handling
+    and decouple application code from Redis library internals.
+    """
+
+    def __init__(self, detail: str = "Redis operation failed"):
+        super().__init__(detail)
