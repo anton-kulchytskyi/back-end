@@ -298,18 +298,12 @@ async def company_with_admin(
 
 
 @pytest_asyncio.fixture()
-async def test_quiz(db_session, test_user):
-    from app.models.company.company import Company
+async def test_quiz(db_session, company_with_admin):
     from app.models.quiz.quiz import Quiz
     from app.models.quiz.quiz_answer import QuizAnswer
     from app.models.quiz.quiz_question import QuizQuestion
 
-    company = Company(
-        name="Test Company",
-        description="desc",
-        is_visible=True,
-        owner_id=test_user.id,
-    )
+    company = company_with_admin
     db_session.add(company)
     await db_session.flush()
 
