@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 
+from app.routers.analytics.company_analytics import router as company_analytics_router
+from app.routers.analytics.user_analytics import router as user_analytics_router
 from app.routers.auth import router as auth_router
 from app.routers.companies.admins import router as company_admins_router
 from app.routers.companies.companies import router as companies_router
@@ -16,6 +18,14 @@ router = APIRouter()
 
 
 # Register routers here
+router.include_router(
+    company_analytics_router,
+    prefix="/analytics/companies",
+    tags=["Analytics Companies"],
+)
+router.include_router(
+    user_analytics_router, prefix="/analytics/me", tags=["Analytics User"]
+)
 router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 router.include_router(
     company_admins_router,

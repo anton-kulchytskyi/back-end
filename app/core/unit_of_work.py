@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from app.core.database import AsyncSessionLocal
 from app.db import (
+    CompanyAnalyticsRepository,
     CompanyMemberRepository,
     CompanyRepository,
     InvitationRepository,
@@ -9,6 +10,7 @@ from app.db import (
     QuizQuestionRepository,
     QuizRepository,
     RequestRepository,
+    UserAnalyticsRepository,
     UserRepository,
 )
 from app.db.quiz.attempt_repository import QuizAttemptRepository
@@ -16,6 +18,8 @@ from app.db.quiz.user_answer_repository import QuizUserAnswerRepository
 
 
 class AbstractUnitOfWork(ABC):
+    company_analytic: CompanyAnalyticsRepository
+    user_analytic: UserAnalyticsRepository
     company_member: CompanyMemberRepository
     companies: CompanyRepository
     invitations: InvitationRepository
@@ -51,6 +55,8 @@ class SQLAlchemyUnitOfWork(AbstractUnitOfWork):
     async def __aenter__(self):
         self.session = self.session_factory()
 
+        self.company_analytic = CompanyAnalyticsRepository(session=self.session)
+        self.user_analytic = UserAnalyticsRepository(session=self.session)
         self.company_member = CompanyMemberRepository(session=self.session)
         self.companies = CompanyRepository(session=self.session)
         self.invitations = InvitationRepository(session=self.session)

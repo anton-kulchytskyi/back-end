@@ -17,6 +17,8 @@ from app.services import (
     RequestService,
     UserService,
 )
+from app.services.analytics.company_analytics_service import CompanyAnalyticsService
+from app.services.analytics.user_analytics_service import UserAnalyticsService
 from app.services.quiz.quiz_export_service import QuizExportService
 
 
@@ -110,11 +112,26 @@ def get_quiz_export_service(
     permission_service: PermissionService = Depends(get_permission_service),
     quiz_service: QuizService = Depends(get_quiz_service),
 ) -> QuizExportService:
-    """Get QuizExportService instance."""
     return QuizExportService(
         uow=uow,
         permission_service=permission_service,
         quiz_service=quiz_service,
+    )
+
+
+def get_user_analytics_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+) -> UserAnalyticsService:
+    return UserAnalyticsService(uow=uow)
+
+
+def get_company_analytics_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    admin_service: AdminService = Depends(get_admin_service),
+) -> CompanyAnalyticsService:
+    return CompanyAnalyticsService(
+        uow=uow,
+        admin_service=admin_service,
     )
 
 

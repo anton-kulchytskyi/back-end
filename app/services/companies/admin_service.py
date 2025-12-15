@@ -153,3 +153,10 @@ class AdminService:
                 response_schema=CompanyMembersListResponse,
                 item_schema=CompanyMemberResponse,
             )
+
+    async def verify_admin_access(self, company_id: int, user_id: int) -> None:
+        """
+        Verify company exists and user is admin or owner.
+        """
+        await self._company_service.get_company_by_id(company_id)
+        await self._permission_service.require_admin(company_id, user_id)
