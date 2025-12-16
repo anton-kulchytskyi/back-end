@@ -19,6 +19,7 @@ from .quiz.attempt import (
     QuizAttemptSubmitRequest,
     UserQuizStatisticsResponse,
 )
+from .quiz.qiuz_redis import RedisQuizAnswerData
 from .quiz.question import QuizQuestionCreateRequest
 from .quiz.quiz import (
     QuizCreateRequest,
@@ -84,4 +85,5 @@ __all__ = [
     "QuizAttemptsListResponse",
     "QuizAttemptSubmitRequest",
     "UserQuizStatisticsResponse",
+    "RedisQuizAnswerData",
 ]

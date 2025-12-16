@@ -1,4 +1,5 @@
 import pytest_asyncio
+from fakeredis.aioredis import FakeRedis
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
@@ -9,7 +10,12 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from app.core.database import Base
-from app.core.dependencies import get_auth_service, get_uow, get_user_service
+from app.core.dependencies import (
+    get_auth_service,
+    get_redis_quiz_service,
+    get_uow,
+    get_user_service,
+)
 from app.core.unit_of_work import AbstractUnitOfWork
 from app.enums import Role
 from app.main import app
@@ -120,11 +126,19 @@ async def override_dependencies_fixture(db_session: AsyncSession):
 
         return AuthService(uow=test_uow, user_service=UserService(test_uow))
 
+    fake_redis = FakeRedis(decode_responses=True)
+
+    def override_get_redis_quiz_service():
+        from app.services.quiz.quiz_redis_service import RedisQuizService
+
+        return RedisQuizService(fake_redis)
+
     app.dependency_overrides[get_uow] = override_get_uow
     app.dependency_overrides[get_user_service] = override_get_user_service
     app.dependency_overrides[get_auth_service] = override_get_auth_service
+    app.dependency_overrides[get_redis_quiz_service] = override_get_redis_quiz_service
 
-    yield
+    yield fake_redis
 
     app.dependency_overrides.clear()
 
@@ -281,6 +295,79 @@ async def company_with_admin(
     await db_session.commit()
     await db_session.refresh(membership)
     return test_company
+
+
+@pytest_asyncio.fixture()
+async def test_quiz(db_session, test_user):
+    from app.models.company.company import Company
+    from app.models.quiz.quiz import Quiz
+    from app.models.quiz.quiz_answer import QuizAnswer
+    from app.models.quiz.quiz_question import QuizQuestion
+
+    company = Company(
+        name="Test Company",
+        description="desc",
+        is_visible=True,
+        owner_id=test_user.id,
+    )
+    db_session.add(company)
+    await db_session.flush()
+
+    quiz = Quiz(
+        title="Test Quiz",
+        description="desc",
+        company_id=company.id,
+    )
+    db_session.add(quiz)
+    await db_session.flush()
+
+    q1 = QuizQuestion(
+        quiz_id=quiz.id,
+        title="Q1?",
+    )
+    db_session.add(q1)
+    await db_session.flush()
+
+    a1 = QuizAnswer(
+        question_id=q1.id,
+        text="A1",
+        is_correct=True,
+    )
+    a2 = QuizAnswer(
+        question_id=q1.id,
+        text="A2",
+        is_correct=False,
+    )
+    db_session.add_all([a1, a2])
+    await db_session.flush()
+
+    q2 = QuizQuestion(
+        quiz_id=quiz.id,
+        title="Q2?",
+    )
+    db_session.add(q2)
+    await db_session.flush()
+
+    b1 = QuizAnswer(
+        question_id=q2.id,
+        text="B1",
+        is_correct=True,
+    )
+    b2 = QuizAnswer(
+        question_id=q2.id,
+        text="B2",
+        is_correct=False,
+    )
+    db_session.add_all([b1, b2])
+    await db_session.flush()
+
+    await db_session.commit()
+
+    await db_session.refresh(quiz, ["questions"])
+    await db_session.refresh(q1, ["answers"])
+    await db_session.refresh(q2, ["answers"])
+
+    return quiz
 
 
 # ==================== PYTEST CONFIGURATION ====================

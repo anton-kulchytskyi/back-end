@@ -1,6 +1,7 @@
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.core.redis import get_redis
 from app.core.unit_of_work import AbstractUnitOfWork, SQLAlchemyUnitOfWork
 from app.models import User
 from app.services import (
@@ -12,6 +13,7 @@ from app.services import (
     PermissionService,
     QuizAttemptService,
     QuizService,
+    RedisQuizService,
     RequestService,
     UserService,
 )
@@ -19,6 +21,11 @@ from app.services import (
 
 def get_uow() -> AbstractUnitOfWork:
     return SQLAlchemyUnitOfWork()
+
+
+def get_redis_quiz_service() -> RedisQuizService:
+    redis = get_redis()
+    return RedisQuizService(redis)
 
 
 def get_user_service(uow: AbstractUnitOfWork = Depends(get_uow)) -> UserService:
@@ -87,9 +94,13 @@ def get_quiz_attempt_service(
     uow: AbstractUnitOfWork = Depends(get_uow),
     permission_service: PermissionService = Depends(get_permission_service),
     quiz_service: QuizService = Depends(get_quiz_service),
+    redis_quiz_service: RedisQuizService = Depends(get_redis_quiz_service),
 ) -> QuizAttemptService:
     return QuizAttemptService(
-        uow=uow, permission_service=permission_service, quiz_service=quiz_service
+        uow=uow,
+        permission_service=permission_service,
+        quiz_service=quiz_service,
+        redis_quiz_service=redis_quiz_service,
     )
 
 

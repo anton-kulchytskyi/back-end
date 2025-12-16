@@ -1,7 +1,10 @@
+from datetime import datetime, timezone
+
 from app.core.exceptions import (
     BadRequestException,
     NotFoundException,
     PermissionDeniedException,
+    RedisException,
     ServiceException,
 )
 from app.core.logger import logger
@@ -12,9 +15,11 @@ from app.schemas import (
     QuizAttemptResponse,
     QuizAttemptsListResponse,
     QuizAttemptSubmitRequest,
+    RedisQuizAnswerData,
     UserQuizStatisticsResponse,
 )
 from app.services.companies.permission_service import PermissionService
+from app.services.quiz.quiz_redis_service import RedisQuizService
 from app.services.quiz.quiz_service import QuizService
 from app.utils.pagination import paginate_query
 
@@ -27,10 +32,12 @@ class QuizAttemptService:
         uow: AbstractUnitOfWork,
         permission_service: PermissionService,
         quiz_service: QuizService,
+        redis_quiz_service: RedisQuizService,
     ):
         self._uow = uow
         self._permisson_service = permission_service
         self._quiz_service = quiz_service
+        self._redis_quiz_service = redis_quiz_service
 
     async def submit_quiz_attempt(
         self,
@@ -89,6 +96,16 @@ class QuizAttemptService:
                 await self._uow.session.refresh(attempt, ["user_answers"])
                 attempt.mark_completed()
 
+                redis_payloads = self._build_redis_payloads(
+                    user_id=current_user.id,
+                    company_id=quiz.company_id,
+                    quiz_id=quiz_id,
+                    attempt_id=attempt.id,
+                    answers_data=answers_data,
+                )
+
+                await self._redis_quiz_service.save_answers_bulk(redis_payloads)
+
                 await self._uow.commit()
 
                 completed_attempt = await self._uow.quiz_attempt.get_with_details(
@@ -101,6 +118,7 @@ class QuizAttemptService:
                 NotFoundException,
                 PermissionDeniedException,
                 BadRequestException,
+                RedisException,
             ):
                 raise
             except Exception as e:
@@ -252,3 +270,34 @@ class QuizAttemptService:
                 f"Answer {answer_id} not found in question {question.id}"
             )
         return answer
+
+    def _build_redis_payloads(
+        self,
+        user_id: int,
+        company_id: int,
+        quiz_id: int,
+        attempt_id: int,
+        answers_data: list[dict],
+    ) -> list[RedisQuizAnswerData]:
+        """
+        Build Redis payloads from answers data.
+
+        Returns:
+            List of RedisQuizAnswerData ready for Redis storage
+        """
+
+        timestamp = datetime.now(timezone.utc)
+
+        return [
+            RedisQuizAnswerData(
+                user_id=user_id,
+                company_id=company_id,
+                quiz_id=quiz_id,
+                question_id=answer["question_id"],
+                answer_id=answer["answer_id"],
+                is_correct=answer["is_correct"],
+                attempt_id=attempt_id,
+                answered_at=timestamp,
+            )
+            for answer in answers_data
+        ]
