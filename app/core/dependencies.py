@@ -106,13 +106,13 @@ def get_quiz_attempt_service(
 
 
 def get_quiz_export_service(
-    redis_quiz_service: RedisQuizService = Depends(get_redis_quiz_service),
+    uow: AbstractUnitOfWork = Depends(get_uow),
     permission_service: PermissionService = Depends(get_permission_service),
     quiz_service: QuizService = Depends(get_quiz_service),
 ) -> QuizExportService:
     """Get QuizExportService instance."""
     return QuizExportService(
-        redis_quiz_service=redis_quiz_service,
+        uow=uow,
         permission_service=permission_service,
         quiz_service=quiz_service,
     )

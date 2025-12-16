@@ -4,22 +4,12 @@ from typing import Any, List
 
 from fastapi.responses import Response
 
-from app.core.exceptions import BadRequestException
-from app.schemas.quiz.qiuz_redis import RedisQuizAnswerData
 from app.schemas.quiz.quiz_export import (
     ExportFormat,
     ExportMetadata,
     ExportResponse,
     QuizAnswerExportData,
 )
-
-
-def validate_format(fmt: str) -> ExportFormat:
-    """Normalize and validate export format."""
-    fmt_normalized = fmt.lower()
-    if fmt_normalized not in ("json", "csv"):
-        raise BadRequestException("Invalid format. Use 'json' or 'csv'.")
-    return ExportFormat(fmt_normalized)
 
 
 class CSVFormatter:
@@ -39,7 +29,7 @@ class CSVFormatter:
     ]
 
     @classmethod
-    def format_to_csv(cls, items: list[RedisQuizAnswerData]) -> str:
+    def format_to_csv(cls, items: list[QuizAnswerExportData]) -> str:
         """Convert list of RedisQuizAnswerData into a CSV string."""
 
         output = io.StringIO()
@@ -52,7 +42,7 @@ class CSVFormatter:
         return output.getvalue()
 
     @staticmethod
-    def _row(item: RedisQuizAnswerData) -> dict[str, Any]:
+    def _row(item: QuizAnswerExportData) -> dict[str, Any]:
         """
         Convert RedisQuizAnswerData into a dict suitable for CSV output.
 
@@ -69,7 +59,7 @@ class CSVFormatter:
         }
 
 
-def make_csv_response(answers: List[RedisQuizAnswerData], filename: str) -> Response:
+def make_csv_response(answers: List[QuizAnswerExportData], filename: str) -> Response:
     content = CSVFormatter.format_to_csv(answers)
     return Response(
         content=content,
@@ -79,14 +69,14 @@ def make_csv_response(answers: List[RedisQuizAnswerData], filename: str) -> Resp
 
 
 def make_json_response(
-    answers: List[RedisQuizAnswerData],
+    answers: List[QuizAnswerExportData],
     *,
     user_id: int | None = None,
     company_id: int | None = None,
     quiz_id: int | None = None,
 ) -> ExportResponse:
     return ExportResponse(
-        data=[QuizAnswerExportData.model_validate(a) for a in answers],
+        data=answers,
         metadata=ExportMetadata(
             total_answers=len(answers),
             user_id=user_id,
