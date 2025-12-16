@@ -19,11 +19,18 @@ from app.services import (
 )
 from app.services.analytics.company_analytics_service import CompanyAnalyticsService
 from app.services.analytics.user_analytics_service import UserAnalyticsService
+from app.services.notification.notification_service import NotificationService
 from app.services.quiz.quiz_export_service import QuizExportService
 
 
 def get_uow() -> AbstractUnitOfWork:
     return SQLAlchemyUnitOfWork()
+
+
+def get_notification_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+) -> NotificationService:
+    return NotificationService(uow=uow)
 
 
 def get_redis_quiz_service() -> RedisQuizService:
@@ -89,8 +96,13 @@ def get_request_service(
 def get_quiz_service(
     uow: AbstractUnitOfWork = Depends(get_uow),
     permission_service: PermissionService = Depends(get_permission_service),
+    notification_service: NotificationService = Depends(get_notification_service),
 ) -> QuizService:
-    return QuizService(uow=uow, permission_service=permission_service)
+    return QuizService(
+        uow=uow,
+        permission_service=permission_service,
+        notification_service=notification_service,
+    )
 
 
 def get_quiz_attempt_service(

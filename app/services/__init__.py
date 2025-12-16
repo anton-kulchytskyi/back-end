@@ -4,6 +4,7 @@ from .companies.invitation_service import InvitationService
 from .companies.member_service import MemberService
 from .companies.permission_service import PermissionService
 from .companies.request_service import RequestService
+from .notification.notification_service import NotificationService
 from .quiz.quiz_attempt_service import QuizAttemptService
 from .quiz.quiz_redis_service import RedisQuizService
 from .quiz.quiz_service import QuizService
@@ -19,6 +20,7 @@ __all__ = [
     "QuizService",
     "QuizAttemptService",
     "RequestService",
+    "NotificationService",
     "AuthService",
     "UserService",
     "RedisQuizService",

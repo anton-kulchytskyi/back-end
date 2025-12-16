@@ -18,8 +18,10 @@ from app.core.dependencies import (
 )
 from app.core.unit_of_work import AbstractUnitOfWork
 from app.enums import Role
+from app.enums.notification_status import NotificationStatus
 from app.main import app
 from app.models import Company, CompanyMember, User
+from app.models.notification.notification import Notification
 from app.services.users.user_service import UserService
 
 # ==================== TEST DATABASE SETUP ====================
@@ -45,6 +47,7 @@ class TestSQLAlchemyUnitOfWork(AbstractUnitOfWork):
             CompanyMemberRepository,
             CompanyRepository,
             InvitationRepository,
+            NotificationRepository,
             QuizAnswerRepository,
             QuizAttemptRepository,
             QuizQuestionRepository,
@@ -60,6 +63,7 @@ class TestSQLAlchemyUnitOfWork(AbstractUnitOfWork):
         self.company_member = CompanyMemberRepository(self.session)
         self.companies = CompanyRepository(self.session)
         self.invitations = InvitationRepository(self.session)
+        self.notifications = NotificationRepository(session=self.session)
         self.quiz_answer = QuizAnswerRepository(session=self.session)
         self.quiz_question = QuizQuestionRepository(session=self.session)
         self.quiz = QuizRepository(session=self.session)
@@ -108,9 +112,9 @@ async def db_session(db_connection: AsyncConnection):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def unit_of_work(db_session: AsyncSession):
-    uow = TestSQLAlchemyUnitOfWork(session=db_session)
-    return uow
+async def unit_of_work(db_session):
+    async with TestSQLAlchemyUnitOfWork(db_session) as uow:
+        yield uow
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -366,6 +370,81 @@ async def test_quiz(db_session, company_with_admin):
     await db_session.refresh(q2, ["answers"])
 
     return quiz
+
+
+@pytest_asyncio.fixture
+async def test_notifications(
+    db_session: AsyncSession,
+    test_user: User,
+) -> list[Notification]:
+    """
+    Create test notifications for a single user.
+
+    - 3 unread notifications
+    - 2 read notifications
+    """
+    notifications: list[Notification] = []
+
+    # Create unread notifications
+    for i in range(3):
+        notif = Notification(
+            user_id=test_user.id,
+            message=f"Test notification {i + 1}",
+            status=NotificationStatus.UNREAD,
+        )
+        db_session.add(notif)
+        notifications.append(notif)
+
+    # Create read notifications
+    for i in range(2):
+        notif = Notification(
+            user_id=test_user.id,
+            message=f"Read notification {i + 1}",
+            status=NotificationStatus.READ,
+        )
+        db_session.add(notif)
+        notifications.append(notif)
+
+    await db_session.commit()
+
+    return notifications
+
+
+@pytest_asyncio.fixture
+async def test_members(
+    db_session: AsyncSession,
+    test_company,
+    test_user,
+) -> list[User]:
+    """
+    Create company members for notification tests.
+
+    Structure:
+    - test_user        -> owner (already exists)
+    - member_1..3      -> regular members
+    """
+    members: list[User] = []
+
+    for i in range(3):
+        user = User(
+            email=f"member{i}@example.com",
+            full_name=f"Member {i}",
+            hashed_password="hashed",
+        )
+        db_session.add(user)
+        await db_session.flush()
+
+        membership = CompanyMember(
+            user_id=user.id,
+            company_id=test_company.id,
+            role=Role.MEMBER,
+        )
+        db_session.add(membership)
+
+        members.append(user)
+
+    await db_session.commit()
+    return members
 
 
 # ==================== PYTEST CONFIGURATION ====================

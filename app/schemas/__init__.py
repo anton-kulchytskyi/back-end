@@ -11,6 +11,14 @@ from .company.invitation import (
 )
 from .company.member import CompanyMemberResponse, CompanyMembersListResponse
 from .company.request import RequestCreateRequest, RequestResponse, RequestsListResponse
+from .notification.notification import (
+    MarkAllAsReadResponse,
+    MarkAsReadResponse,
+    NotificationBase,
+    NotificationResponse,
+    NotificationsListResponse,
+    NotificationsPaginationRequest,
+)
 from .pagination.pagination import PaginatedResponseBaseSchema, PaginationBaseSchema
 from .quiz.answer import QuizAnswerCreateRequest
 from .quiz.attempt import (
@@ -67,6 +75,13 @@ __all__ = [
     "RequestCreateRequest",
     "RequestResponse",
     "RequestsListResponse",
+    # Notifications schemas
+    "MarkAllAsReadResponse",
+    "MarkAsReadResponse",
+    "NotificationBase",
+    "NotificationResponse",
+    "NotificationsListResponse",
+    "NotificationsPaginationRequest",
     # Pagination schemas
     "PaginationBaseSchema",
     "PaginatedResponseBaseSchema",

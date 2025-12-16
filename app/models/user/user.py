@@ -7,7 +7,14 @@ from app.core.database import Base
 from app.models.base.mixins import IDMixin, TimestampMixin
 
 if TYPE_CHECKING:
-    from app.models import Company, CompanyMember, Invitation, QuizAttempt, Request
+    from app.models import (
+        Company,
+        CompanyMember,
+        Invitation,
+        Notification,
+        QuizAttempt,
+        Request,
+    )
 
 
 class User(IDMixin, TimestampMixin, Base):
@@ -31,6 +38,9 @@ class User(IDMixin, TimestampMixin, Base):
     )
     quiz_attempts: Mapped[list["QuizAttempt"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    notifications: Mapped[list["Notification"]] = relationship(
+        "Notification", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
