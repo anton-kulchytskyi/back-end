@@ -8,6 +8,8 @@ from sqlalchemy.orm import selectinload
 from app.db.base.base_repository import BaseRepository
 from app.models import QuizAttempt
 
+MAX_EXPORT_LIMIT = 1_000_000
+
 
 class QuizAttemptRepository(BaseRepository[QuizAttempt]):
     """Repository for QuizAttempt model with analytics operations."""
@@ -149,3 +151,34 @@ class QuizAttemptRepository(BaseRepository[QuizAttempt]):
                 selectinload(QuizAttempt.user_answers),
             ],
         )
+
+    async def get_answers_for_export(
+        self,
+        user_id: int | None = None,
+        company_id: int | None = None,
+        quiz_id: int | None = None,
+    ) -> list[QuizAttempt]:
+        filters = [QuizAttempt.completed_at.isnot(None)]
+
+        if user_id is not None:
+            filters.append(QuizAttempt.user_id == user_id)
+
+        if company_id is not None:
+            filters.append(QuizAttempt.company_id == company_id)
+
+        if quiz_id is not None:
+            filters.append(QuizAttempt.quiz_id == quiz_id)
+
+        attempts, _ = await self.get_many_by_filters(
+            *filters,
+            skip=0,
+            limit=MAX_EXPORT_LIMIT,
+            order_by=[QuizAttempt.completed_at.desc()],
+            options=[
+                selectinload(QuizAttempt.user_answers),
+                selectinload(QuizAttempt.quiz),
+                selectinload(QuizAttempt.company),
+            ],
+        )
+
+        return attempts

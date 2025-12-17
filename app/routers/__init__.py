@@ -8,6 +8,7 @@ from app.routers.health import router as health_router
 from app.routers.invitations import router as invitations_router
 from app.routers.quizzes.qiuzzes import router as quizzes_router
 from app.routers.quizzes.quiz_attempts import router as quiz_attempt_router
+from app.routers.quizzes.quiz_export import router as export_router
 from app.routers.requests import router as requests_router
 from app.routers.users import router as users_router
 
@@ -33,5 +34,6 @@ router.include_router(
 )
 router.include_router(health_router, prefix="", tags=["Health"])
 router.include_router(invitations_router, prefix="/invitations", tags=["Invitations"])
+router.include_router(export_router, prefix="/export", tags=["Export"])
 router.include_router(requests_router, prefix="/requests", tags=["Requests"])
 router.include_router(users_router, prefix="/users", tags=["Users"])

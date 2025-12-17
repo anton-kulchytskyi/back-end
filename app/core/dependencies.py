@@ -17,6 +17,7 @@ from app.services import (
     RequestService,
     UserService,
 )
+from app.services.quiz.quiz_export_service import QuizExportService
 
 
 def get_uow() -> AbstractUnitOfWork:
@@ -101,6 +102,19 @@ def get_quiz_attempt_service(
         permission_service=permission_service,
         quiz_service=quiz_service,
         redis_quiz_service=redis_quiz_service,
+    )
+
+
+def get_quiz_export_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    permission_service: PermissionService = Depends(get_permission_service),
+    quiz_service: QuizService = Depends(get_quiz_service),
+) -> QuizExportService:
+    """Get QuizExportService instance."""
+    return QuizExportService(
+        uow=uow,
+        permission_service=permission_service,
+        quiz_service=quiz_service,
     )
 
 
