@@ -83,9 +83,11 @@ async def test_company_service_permission_denied(
     pagination = PaginationBaseSchema(page=1, limit=10)
 
     with pytest.raises(PermissionDeniedException):
-        await service.get_users_weekly_averages_paginated(
+        await service.get_users_averages_paginated(
             company_id=test_company.id,
             current_user_id=test_member_user.id,
+            from_date=date(2000, 1, 1),
+            to_date=date(2100, 1, 1),
             pagination=pagination,
         )
 
@@ -182,9 +184,11 @@ async def test_company_service_owner_can_access(
     service = CompanyAnalyticsService(uow, admin_service)
     pagination = PaginationBaseSchema(page=1, limit=10)
 
-    result = await service.get_users_weekly_averages_paginated(
+    result = await service.get_users_averages_paginated(
         company_id=test_company.id,
         current_user_id=test_user.id,
+        from_date=date(2000, 1, 1),
+        to_date=date(2100, 1, 1),
         pagination=pagination,
     )
 
@@ -211,9 +215,11 @@ async def test_company_service_admin_can_access(
 
     pagination = PaginationBaseSchema(page=1, limit=10)
 
-    result = await service.get_users_weekly_averages_paginated(
+    result = await service.get_users_averages_paginated(
         company_id=company_with_admin.id,
         current_user_id=test_admin_user.id,
+        from_date=date(2000, 1, 1),
+        to_date=date(2100, 1, 1),
         pagination=pagination,
     )
 

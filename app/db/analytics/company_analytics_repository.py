@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any
 
 from sqlalchemy import func, select
@@ -11,21 +12,21 @@ class CompanyAnalyticsRepository(BaseAnalyticsRepository):
     Analytics queries related to company quizzes.
     """
 
-    async def get_company_users_weekly_averages_paginated(
+    async def get_company_users_averages_paginated(
         self,
         company_id: int,
+        from_date: date,
+        to_date: date,
         skip: int,
         limit: int,
-    ) -> tuple[list[Any], int]:
+    ) -> tuple[list, int]:
         """
-        Paginated weekly average scores for all users in a company.
+        Paginated average scores for all users in a company within date range.
         """
-        week = self.week_trunc(QuizAttempt.completed_at)
 
         base_query = (
             select(
                 QuizAttempt.user_id,
-                week.label("week_start"),
                 self.avg_correct_case(QuizUserAnswer.is_correct).label("average_score"),
             )
             .join(
@@ -33,9 +34,13 @@ class CompanyAnalyticsRepository(BaseAnalyticsRepository):
                 QuizUserAnswer.attempt_id == QuizAttempt.id,
             )
             .join(Quiz, Quiz.id == QuizAttempt.quiz_id)
-            .where(Quiz.company_id == company_id)
-            .group_by(QuizAttempt.user_id, week)
-            .order_by(week.desc())
+            .where(
+                Quiz.company_id == company_id,
+                QuizAttempt.completed_at.isnot(None),
+                func.date(QuizAttempt.completed_at).between(from_date, to_date),
+            )
+            .group_by(QuizAttempt.user_id)
+            .order_by(QuizAttempt.user_id)
         )
 
         total = await self.count_from_subquery(base_query)
@@ -45,26 +50,30 @@ class CompanyAnalyticsRepository(BaseAnalyticsRepository):
 
         return items, total
 
-    async def get_company_user_quiz_weekly_averages_paginated(
+    async def get_company_user_quiz_averages_paginated(
         self,
         company_id: int,
         target_user_id: int,
+        from_date: date,
+        to_date: date,
         skip: int,
         limit: int,
-    ) -> tuple[list[Any], int]:
+    ) -> tuple[list, int]:
         """
-        Paginated weekly average scores per quiz for a selected user.
+        Paginated average scores per quiz for a selected user in a company
+        within date range.
         """
-        week = self.week_trunc(QuizAttempt.completed_at)
 
         base_query = (
             select(
                 Quiz.id.label("quiz_id"),
                 Quiz.title.label("quiz_title"),
-                week.label("week_start"),
                 self.avg_correct_case(QuizUserAnswer.is_correct).label("average_score"),
             )
-            .join(QuizAttempt, QuizAttempt.quiz_id == Quiz.id)
+            .join(
+                QuizAttempt,
+                QuizAttempt.quiz_id == Quiz.id,
+            )
             .join(
                 QuizUserAnswer,
                 QuizUserAnswer.attempt_id == QuizAttempt.id,
@@ -72,9 +81,11 @@ class CompanyAnalyticsRepository(BaseAnalyticsRepository):
             .where(
                 Quiz.company_id == company_id,
                 QuizAttempt.user_id == target_user_id,
+                QuizAttempt.completed_at.isnot(None),
+                func.date(QuizAttempt.completed_at).between(from_date, to_date),
             )
-            .group_by(Quiz.id, Quiz.title, week)
-            .order_by(week.desc())
+            .group_by(Quiz.id, Quiz.title)
+            .order_by(Quiz.title)
         )
 
         total = await self.count_from_subquery(base_query)

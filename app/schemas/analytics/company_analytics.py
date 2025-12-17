@@ -1,19 +1,19 @@
-from datetime import date, datetime
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.pagination.pagination import PaginatedResponseBaseSchema
 
 
-class WeeklyAverageResponse(BaseModel):
+class AverageScoreResponse(BaseModel):
     """
-    Weekly average score entity.
+    Average score entity for analytics (0..1).
+
     Used for:
-    - users weekly averages
-    - quizzes weekly averages for a user
+    - company users average scores within date range
+    - company user quiz average scores within date range
     """
 
-    week_start: date
     average_score: float = Field(..., ge=0.0, le=1.0)
 
     # Optional identifiers depending on aggregation level
@@ -24,21 +24,21 @@ class WeeklyAverageResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CompanyUsersWeeklyAveragesListResponse(
-    PaginatedResponseBaseSchema[WeeklyAverageResponse]
+class CompanyUsersAveragesListResponse(
+    PaginatedResponseBaseSchema[AverageScoreResponse]
 ):
     """
-    Paginated weekly averages for all users in a company.
+    Paginated average scores for all users in a company within date range.
     """
 
     pass
 
 
-class CompanyUserQuizWeeklyAveragesListResponse(
-    PaginatedResponseBaseSchema[WeeklyAverageResponse]
+class CompanyUserQuizAveragesListResponse(
+    PaginatedResponseBaseSchema[AverageScoreResponse]
 ):
     """
-    Paginated weekly quiz averages for a selected user.
+    Paginated average scores per quiz for a selected user in a company within date range.
     """
 
     pass

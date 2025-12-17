@@ -129,17 +129,23 @@ async def test_user_last_completions_paginated(db_session, test_user, test_quiz)
 
 
 @pytest.mark.asyncio
-async def test_company_user_quiz_weekly_averages(db_session, test_user, test_quiz):
-    """Test weekly quiz averages for specific user"""
+async def test_company_user_quiz_averages_by_date_range(
+    db_session,
+    test_user,
+    test_quiz,
+):
+    """Test average quiz score for a user in company within date range"""
     repo = CompanyAnalyticsRepository(db_session)
 
-    # Week 1
+    now = datetime.now(timezone.utc)
+
+    # Attempt 1 (inside range)
     attempt1 = QuizAttempt(
         user_id=test_user.id,
         quiz_id=test_quiz.id,
         company_id=test_quiz.company_id,
         total_questions=2,
-        completed_at=datetime.now(timezone.utc) - timedelta(days=14),
+        completed_at=now - timedelta(days=10),
     )
     db_session.add(attempt1)
     await db_session.flush()
@@ -151,25 +157,23 @@ async def test_company_user_quiz_weekly_averages(db_session, test_user, test_qui
                 question_id=1,
                 answer_id=1,
                 is_correct=True,
-                answered_at=datetime.now(timezone.utc) - timedelta(days=14),
             ),
             QuizUserAnswer(
                 attempt_id=attempt1.id,
                 question_id=2,
                 answer_id=2,
                 is_correct=True,
-                answered_at=datetime.now(timezone.utc) - timedelta(days=14),
             ),
         ]
     )
 
-    # Week 2
+    # Attempt 2 (inside range)
     attempt2 = QuizAttempt(
         user_id=test_user.id,
         quiz_id=test_quiz.id,
         company_id=test_quiz.company_id,
         total_questions=2,
-        completed_at=datetime.now(timezone.utc),
+        completed_at=now - timedelta(days=2),
     )
     db_session.add(attempt2)
     await db_session.flush()
@@ -181,31 +185,34 @@ async def test_company_user_quiz_weekly_averages(db_session, test_user, test_qui
                 question_id=1,
                 answer_id=1,
                 is_correct=False,
-                answered_at=datetime.now(timezone.utc),
             ),
             QuizUserAnswer(
                 attempt_id=attempt2.id,
                 question_id=2,
                 answer_id=2,
                 is_correct=True,
-                answered_at=datetime.now(timezone.utc),
             ),
         ]
     )
+
     await db_session.commit()
 
-    items, total = await repo.get_company_user_quiz_weekly_averages_paginated(
+    from_date = (now - timedelta(days=30)).date()
+    to_date = now.date()
+
+    items, total = await repo.get_company_user_quiz_averages_paginated(
         company_id=test_quiz.company_id,
         target_user_id=test_user.id,
+        from_date=from_date,
+        to_date=to_date,
         skip=0,
         limit=10,
     )
 
-    # Should have 2 weeks of data
-    assert total == 2
-    assert len(items) == 2
+    assert total == 1
+    assert len(items) == 1
 
-    # Check scores
-    scores = [item.average_score for item in items]
-    assert 1.0 in scores  # Week 1: 2/2 = 100%
-    assert 0.5 in scores  # Week 2: 1/2 = 50%
+    item = items[0]
+    assert item.quiz_id == test_quiz.id
+    assert item.quiz_title == test_quiz.title
+    assert item.average_score == pytest.approx(0.75)

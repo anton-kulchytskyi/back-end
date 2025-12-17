@@ -32,12 +32,18 @@ async def test_get_my_overall_analytics_unauthorized(
 
 
 @pytest.mark.asyncio
-async def test_company_weekly_analytics_forbidden(
+async def test_company_analytics_forbidden(
     client: AsyncClient, test_company, test_member_token
 ):
     response = await client.get(
-        f"/analytics/companies/{test_company.id}/users/weekly-averages",
+        f"/analytics/companies/{test_company.id}/users/averages",
         headers={"Authorization": f"Bearer {test_member_token}"},
+        params={
+            "from_date": "2024-01-01",
+            "to_date": "2024-12-31",
+            "page": 1,
+            "limit": 10,
+        },
     )
 
     assert response.status_code == 403
@@ -123,14 +129,19 @@ async def test_get_my_last_completions_unauthorized(
 
 
 @pytest.mark.asyncio
-async def test_company_weekly_analytics_owner_success(
+async def test_company_analytics_owner_success(
     client: AsyncClient, test_company, test_user_token
 ):
     """Test owner can access company analytics"""
     response = await client.get(
-        f"/analytics/companies/{test_company.id}/users/weekly-averages",
+        f"/analytics/companies/{test_company.id}/users/averages",
         headers={"Authorization": f"Bearer {test_user_token}"},
-        params={"page": 1, "limit": 10},
+        params={
+            "from_date": "2000-01-01",
+            "to_date": "2100-01-01",
+            "page": 1,
+            "limit": 10,
+        },
     )
 
     assert response.status_code == 200
@@ -140,14 +151,19 @@ async def test_company_weekly_analytics_owner_success(
 
 
 @pytest.mark.asyncio
-async def test_company_weekly_analytics_admin_success(
+async def test_company_analytics_admin_success(
     client: AsyncClient, company_with_admin, test_admin_token
 ):
     """Test admin can access company analytics"""
     response = await client.get(
-        f"/analytics/companies/{company_with_admin.id}/users/weekly-averages",
+        f"/analytics/companies/{company_with_admin.id}/users/averages",
         headers={"Authorization": f"Bearer {test_admin_token}"},
-        params={"page": 1, "limit": 10},
+        params={
+            "from_date": "2024-01-01",
+            "to_date": "2024-12-31",
+            "page": 1,
+            "limit": 10,
+        },
     )
 
     assert response.status_code == 200
@@ -157,11 +173,16 @@ async def test_company_weekly_analytics_admin_success(
 async def test_company_user_quiz_averages_success(
     client: AsyncClient, test_company, test_user, test_user_token
 ):
-    """Test GET /companies/{id}/users/{user_id}/quizzes/weekly-averages"""
+    """Test GET /companies/{id}/users/{user_id}/quizzes/averages"""
     response = await client.get(
-        f"/analytics/companies/{test_company.id}/users/{test_user.id}/quizzes/weekly-averages",
+        f"/analytics/companies/{test_company.id}/users/{test_user.id}/quizzes/averages",
         headers={"Authorization": f"Bearer {test_user_token}"},
-        params={"page": 1, "limit": 10},
+        params={
+            "from_date": "2024-01-01",
+            "to_date": "2024-12-31",
+            "page": 1,
+            "limit": 10,
+        },
     )
 
     assert response.status_code == 200
@@ -193,9 +214,14 @@ async def test_company_analytics_invalid_company_id(
 ):
     """Test with non-existent company ID"""
     response = await client.get(
-        "/analytics/companies/99999/users/weekly-averages",
+        "/analytics/companies/99999/users/averages",
         headers={"Authorization": f"Bearer {test_user_token}"},
-        params={"page": 1, "limit": 10},
+        params={
+            "from_date": "2000-01-01",
+            "to_date": "2100-01-01",
+            "page": 1,
+            "limit": 10,
+        },
     )
 
     # assert response.status_code in (403, 404)
@@ -206,8 +232,13 @@ async def test_company_analytics_invalid_company_id(
 async def test_company_analytics_unauthorized(client: AsyncClient, test_company):
     """Test unauthorized access to company analytics"""
     response = await client.get(
-        f"/analytics/companies/{test_company.id}/users/weekly-averages",
-        params={"page": 1, "limit": 10},
+        f"/analytics/companies/{test_company.id}/users/averages",
+        params={
+            "from_date": "2000-01-01",
+            "to_date": "2100-01-01",
+            "page": 1,
+            "limit": 10,
+        },
     )
 
     assert response.status_code in (401, 403)

@@ -1,12 +1,14 @@
-from app.core.exceptions import ServiceException
+from datetime import date
+
+from app.core.exceptions import BadRequestException, ServiceException
 from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
 from app.schemas.analytics.company_analytics import (
+    AverageScoreResponse,
     CompanyUserLastAttemptResponse,
-    CompanyUserQuizWeeklyAveragesListResponse,
+    CompanyUserQuizAveragesListResponse,
+    CompanyUsersAveragesListResponse,
     CompanyUsersLastAttemptsListResponse,
-    CompanyUsersWeeklyAveragesListResponse,
-    WeeklyAverageResponse,
 )
 from app.schemas.pagination.pagination import PaginationBaseSchema
 from app.services.companies.admin_service import AdminService
@@ -26,15 +28,19 @@ class CompanyAnalyticsService:
         self._uow = uow
         self._admin_service = admin_service
 
-    async def get_users_weekly_averages_paginated(
+    async def get_users_averages_paginated(
         self,
         company_id: int,
         current_user_id: int,
+        from_date: date,
+        to_date: date,
         pagination: PaginationBaseSchema,
-    ) -> CompanyUsersWeeklyAveragesListResponse:
+    ) -> CompanyUsersAveragesListResponse:
         """
-        Get paginated weekly average scores for all users of company quizzes.
+        Get paginated average scores for all users in a company within date range.
         """
+        if from_date > to_date:
+            raise BadRequestException("from_date must be before or equal to to_date")
 
         await self._admin_service.verify_admin_access(
             company_id=company_id,
@@ -45,8 +51,10 @@ class CompanyAnalyticsService:
             try:
 
                 async def db_fetch(skip: int, limit: int):
-                    return await self._uow.company_analytic.get_company_users_weekly_averages_paginated(
+                    return await self._uow.company_analytic.get_company_users_averages_paginated(
                         company_id=company_id,
+                        from_date=from_date,
+                        to_date=to_date,
                         skip=skip,
                         limit=limit,
                     )
@@ -54,28 +62,31 @@ class CompanyAnalyticsService:
                 return await paginate_query(
                     db_fetch_func=db_fetch,
                     pagination=pagination,
-                    response_schema=CompanyUsersWeeklyAveragesListResponse,
-                    item_schema=WeeklyAverageResponse,
+                    response_schema=CompanyUsersAveragesListResponse,
+                    item_schema=AverageScoreResponse,
                 )
 
             except Exception as e:
                 logger.error(
-                    f"Error getting weekly averages for company {company_id}: {e}"
+                    f"Error getting users averages for company {company_id}: {e}"
                 )
-                raise ServiceException(
-                    "Failed to retrieve company users weekly averages"
-                )
+                raise ServiceException("Failed to retrieve company users averages")
 
-    async def get_user_quiz_weekly_averages_paginated(
+    async def get_user_quiz_averages_paginated(
         self,
         company_id: int,
         target_user_id: int,
         current_user_id: int,
+        from_date: date,
+        to_date: date,
         pagination: PaginationBaseSchema,
-    ) -> CompanyUserQuizWeeklyAveragesListResponse:
+    ) -> CompanyUserQuizAveragesListResponse:
         """
-        Get paginated weekly quiz averages for a selected user.
+        Get paginated average scores per quiz for a selected user
+        in a company within date range.
         """
+        if from_date > to_date:
+            raise BadRequestException("from_date must be before or equal to to_date")
 
         await self._admin_service.verify_admin_access(
             company_id=company_id,
@@ -86,9 +97,11 @@ class CompanyAnalyticsService:
             try:
 
                 async def db_fetch(skip: int, limit: int):
-                    return await self._uow.company_analytic.get_company_user_quiz_weekly_averages_paginated(
+                    return await self._uow.company_analytic.get_company_user_quiz_averages_paginated(
                         company_id=company_id,
                         target_user_id=target_user_id,
+                        from_date=from_date,
+                        to_date=to_date,
                         skip=skip,
                         limit=limit,
                     )
@@ -96,16 +109,16 @@ class CompanyAnalyticsService:
                 return await paginate_query(
                     db_fetch_func=db_fetch,
                     pagination=pagination,
-                    response_schema=CompanyUserQuizWeeklyAveragesListResponse,
-                    item_schema=WeeklyAverageResponse,
+                    response_schema=CompanyUserQuizAveragesListResponse,
+                    item_schema=AverageScoreResponse,
                 )
 
             except Exception as e:
                 logger.error(
-                    f"Error getting quiz weekly averages for user {target_user_id} "
+                    f"Error getting quiz averages for user {target_user_id} "
                     f"in company {company_id}: {e}"
                 )
-                raise ServiceException("Failed to retrieve user quiz weekly averages")
+                raise ServiceException("Failed to retrieve user quiz averages")
 
     async def get_users_last_attempts_paginated(
         self,

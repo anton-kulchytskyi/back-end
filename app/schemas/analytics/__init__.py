@@ -1,9 +1,9 @@
 from .company_analytics import (
+    AverageScoreResponse,
     CompanyUserLastAttemptResponse,
-    CompanyUserQuizWeeklyAveragesListResponse,
+    CompanyUserQuizAveragesListResponse,
+    CompanyUsersAveragesListResponse,
     CompanyUsersLastAttemptsListResponse,
-    CompanyUsersWeeklyAveragesListResponse,
-    WeeklyAverageResponse,
 )
 from .user_analytics import (
     UserOverallRatingResponse,
@@ -21,9 +21,9 @@ __all__ = [
     "UserQuizLastCompletionResponse",
     "UserQuizLastCompletionListResponse",
     # Company analytics
-    "WeeklyAverageResponse",
-    "CompanyUsersWeeklyAveragesListResponse",
-    "CompanyUserQuizWeeklyAveragesListResponse",
+    "AverageScoreResponse",
+    "CompanyUsersAveragesListResponse",
+    "CompanyUserQuizAveragesListResponse",
     "CompanyUserLastAttemptResponse",
     "CompanyUsersLastAttemptsListResponse",
 ]
