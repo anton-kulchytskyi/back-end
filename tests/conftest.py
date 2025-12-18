@@ -41,6 +41,7 @@ class TestSQLAlchemyUnitOfWork(AbstractUnitOfWork):
 
     async def __aenter__(self):
         from app.db import (
+            CompanyAnalyticsRepository,
             CompanyMemberRepository,
             CompanyRepository,
             InvitationRepository,
@@ -50,9 +51,12 @@ class TestSQLAlchemyUnitOfWork(AbstractUnitOfWork):
             QuizRepository,
             QuizUserAnswerRepository,
             RequestRepository,
+            UserAnalyticsRepository,
             UserRepository,
         )
 
+        self.company_analytic = CompanyAnalyticsRepository(self.session)
+        self.user_analytic = UserAnalyticsRepository(self.session)
         self.company_member = CompanyMemberRepository(self.session)
         self.companies = CompanyRepository(self.session)
         self.invitations = InvitationRepository(self.session)
