@@ -1,8 +1,9 @@
-from fastapi import Depends
+from fastapi import Depends, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.redis import get_redis
 from app.core.unit_of_work import AbstractUnitOfWork, SQLAlchemyUnitOfWork
+from app.core.websocket_manager import WebSocketManager, get_websocket_manager
 from app.models import User
 from app.services import (
     AdminService,
@@ -20,6 +21,7 @@ from app.services import (
 from app.services.analytics.company_analytics_service import CompanyAnalyticsService
 from app.services.analytics.user_analytics_service import UserAnalyticsService
 from app.services.notification.notification_service import NotificationService
+from app.services.notification.websocket_service import WebSocketService
 from app.services.quiz.quiz_export_service import QuizExportService
 
 
@@ -29,13 +31,27 @@ def get_uow() -> AbstractUnitOfWork:
 
 def get_notification_service(
     uow: AbstractUnitOfWork = Depends(get_uow),
+    manager: WebSocketManager = Depends(get_websocket_manager),
 ) -> NotificationService:
-    return NotificationService(uow=uow)
+    websocket_service = WebSocketService(manager=manager)
+    return NotificationService(uow=uow, websocket_service=websocket_service)
 
 
 def get_redis_quiz_service() -> RedisQuizService:
     redis = get_redis()
     return RedisQuizService(redis)
+
+
+def get_websocket_service(
+    manager: WebSocketManager = Depends(get_websocket_manager),
+) -> WebSocketService:
+    """
+    Dependency для WebSocketService.
+
+    Returns:
+        WebSocketService instance з injected WebSocketManager
+    """
+    return WebSocketService(manager=manager)
 
 
 def get_user_service(uow: AbstractUnitOfWork = Depends(get_uow)) -> UserService:
@@ -97,11 +113,13 @@ def get_quiz_service(
     uow: AbstractUnitOfWork = Depends(get_uow),
     permission_service: PermissionService = Depends(get_permission_service),
     notification_service: NotificationService = Depends(get_notification_service),
+    websocket_service: WebSocketService = Depends(get_websocket_service),
 ) -> QuizService:
     return QuizService(
         uow=uow,
         permission_service=permission_service,
         notification_service=notification_service,
+        websocket_service=websocket_service,
     )
 
 
@@ -164,3 +182,19 @@ async def get_current_user(
     """
     token = credentials.credentials
     return await auth_service.get_current_user_from_token(token)
+
+
+async def get_current_user_websocket(
+    token: str = Query(..., description="JWT access token"),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> User:
+    """
+    Dependency для WebSocket authentication.
+
+    Token читається з query parameter: ?token={token}
+    Підтримує JWT (HS256) та Auth0 (RS256).
+
+    Raises:
+        WebSocketException: Якщо authentication failed
+    """
+    return await auth_service.get_current_user_from_token_websocket(token)

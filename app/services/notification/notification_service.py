@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from app.core.exceptions import NotFoundException, ServiceException
 from app.core.logger import logger
 from app.core.unit_of_work import AbstractUnitOfWork
@@ -12,12 +16,20 @@ from app.schemas import (
 )
 from app.utils.pagination import paginate_query
 
+if TYPE_CHECKING:
+    from app.services.notification.websocket_service import WebSocketService
+
 
 class NotificationService:
     """Service for notification business logic."""
 
-    def __init__(self, uow: AbstractUnitOfWork):
+    def __init__(
+        self,
+        uow: AbstractUnitOfWork,
+        websocket_service: WebSocketService | None = None,
+    ):
         self._uow = uow
+        self._websocket_service = websocket_service
 
     async def create_notification(
         self,
@@ -136,6 +148,12 @@ class NotificationService:
 
             await self._uow.commit()
 
+            if self._websocket_service:
+                await self._websocket_service.broadcast_notification_read(
+                    user_id=user_id,
+                    notification_id=notification_id,
+                )
+
             return MarkAsReadResponse.model_validate(notification)
 
         except NotFoundException:
@@ -156,6 +174,9 @@ class NotificationService:
         try:
             marked_count = await self._uow.notifications.mark_all_as_read(user_id)
             await self._uow.commit()
+
+            if self._websocket_service and marked_count > 0:
+                await self._websocket_service.broadcast_all_notifications_read(user_id)
 
             return MarkAllAsReadResponse(
                 message=f"{marked_count} notification{'s' if marked_count != 1 else ''} marked as read",

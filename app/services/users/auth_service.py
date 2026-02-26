@@ -1,5 +1,9 @@
 from app.core.auth0 import Auth0Error, get_email_from_auth0_token, verify_auth0_token
-from app.core.exceptions import ServiceException, UnauthorizedException
+from app.core.exceptions import (
+    ServiceException,
+    UnauthorizedException,
+    WebSocketAuthException,
+)
 from app.core.logger import logger
 from app.core.security import (
     create_access_token,
@@ -73,6 +77,20 @@ class AuthService:
             return user
 
         raise UnauthorizedException("Could not validate credentials")
+
+    async def get_current_user_from_token_websocket(self, token: str) -> User:
+        """
+        Get current user from token.
+        Supports both our JWT tokens (HS256) and Auth0 tokens (RS256).
+        """
+        try:
+            return await self.get_current_user_from_token(token)
+        except UnauthorizedException as e:
+            # Конвертуємо HTTP 401 у WebSocket Close Code 1008
+            raise WebSocketAuthException(reason=str(e.detail))
+        except Exception as e:
+            logger.error(f"Unexpected error validating WebSocket token: {str(e)}")
+            raise WebSocketAuthException(reason="Authentication failed")
 
     async def _try_get_user_from_jwt(self, token: str) -> User | None:
         """

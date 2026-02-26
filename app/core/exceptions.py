@@ -1,6 +1,6 @@
 """Custom exceptions for the application."""
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, WebSocketException, status
 
 
 # --- Base exception --- #
@@ -72,3 +72,13 @@ class RedisException(ServiceException):
 
     def __init__(self, detail: str = "Redis operation failed"):
         super().__init__(detail)
+
+
+class WebSocketAuthException(WebSocketException):
+    """
+    Виняток для помилок автентифікації у WebSocket.
+    Використовує Close Code 1008 (Policy Violation).
+    """
+
+    def __init__(self, reason: str = "Could not validate credentials"):
+        super().__init__(code=status.WS_1008_POLICY_VIOLATION, reason=reason)
