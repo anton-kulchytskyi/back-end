@@ -21,3 +21,6 @@ python-multipart==0.0.20
 # HTTP & External Requests
 httpx==0.28.1
 requests==2.32.5
+
+# Scheduling
+apscheduler==3.10.4
