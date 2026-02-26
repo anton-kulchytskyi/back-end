@@ -4,6 +4,7 @@ from .company.company_member_repository import CompanyMemberRepository
 from .company.company_repository import CompanyRepository
 from .company.invitation_repository import InvitationRepository
 from .company.request_repository import RequestRepository
+from .notification.notification_repository import NotificationRepository
 from .quiz.answer_repository import QuizAnswerRepository
 from .quiz.attempt_repository import QuizAttemptRepository
 from .quiz.question_repository import QuizQuestionRepository
@@ -18,10 +19,11 @@ __all__ = [
     "CompanyRepository",
     "InvitationRepository",
     "RequestRepository",
-    "UserRepository",
+    "NotificationRepository",
     "QuizRepository",
     "QuizQuestionRepository",
     "QuizAnswerRepository",
     "QuizAttemptRepository",
     "QuizUserAnswerRepository",
+    "UserRepository",
 ]

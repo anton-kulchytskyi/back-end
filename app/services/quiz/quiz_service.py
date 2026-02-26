@@ -15,6 +15,8 @@ from app.schemas import (
     QuizzesListResponse,
 )
 from app.services import PermissionService
+from app.services.notification.notification_service import NotificationService
+from app.services.notification.websocket_service import WebSocketService
 from app.utils.nested import replace_children
 from app.utils.pagination import paginate_query
 
@@ -26,9 +28,13 @@ class QuizService:
         self,
         uow: AbstractUnitOfWork,
         permission_service: PermissionService,
+        notification_service: NotificationService,
+        websocket_service: WebSocketService | None = None,
     ):
         self._uow = uow
         self._permission_service = permission_service
+        self._notification_service = notification_service
+        self._websocket_service = websocket_service
 
     async def create_quiz(
         self,
@@ -40,6 +46,7 @@ class QuizService:
         Create quiz with questions and answers.
 
         Only for owner/admin of company.
+        Automatically notifies all company members (except creator).
 
         """
         await self._permission_service.require_admin(company_id, current_user.id)
@@ -56,9 +63,31 @@ class QuizService:
 
                 await self._create_questions_with_answers(created_quiz, data.questions)
 
+                notifications = await self._notification_service.create_notifications_for_company_members(
+                    company_id=company_id,
+                    quiz_title=data.title,
+                    exclude_user_id=current_user.id,
+                )
+
                 await self._uow.commit()
 
                 await self._uow.quiz.refresh_after_create_or_update(created_quiz)
+
+                if self._websocket_service:
+                    for notification in notifications:
+                        await self._websocket_service.send_notification_to_user(
+                            user_id=notification.user_id,
+                            notification_data={
+                                "id": notification.id,
+                                "message": notification.message,
+                                "status": notification.status.value,
+                                "created_at": notification.created_at.isoformat(),
+                            },
+                        )
+
+                logger.info(
+                    f"Quiz '{created_quiz.title}' created with notifications in company {company_id}"
+                )
 
                 return await self._uow.quiz.get_with_relations(created_quiz.id)
             except Exception as e:

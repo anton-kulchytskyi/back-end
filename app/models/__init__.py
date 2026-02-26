@@ -2,6 +2,7 @@ from .company.company import Company
 from .company.company_member import CompanyMember
 from .company.invitation import Invitation
 from .company.request import Request
+from .notification.notification import Notification
 from .quiz.quiz import Quiz
 from .quiz.quiz_answer import QuizAnswer
 from .quiz.quiz_attempt import QuizAttempt
@@ -15,6 +16,7 @@ __all__ = [
     "CompanyMember",
     "Invitation",
     "Request",
+    "Notification",
     "Quiz",
     "QuizAnswer",
     "QuizAttempt",

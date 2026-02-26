@@ -8,6 +8,8 @@ from app.routers.companies.companies import router as companies_router
 from app.routers.companies.company_actions import router as company_actions_router
 from app.routers.health import router as health_router
 from app.routers.invitations import router as invitations_router
+from app.routers.notifications.notifications import router as notification_router
+from app.routers.notifications.websocket import router as websocket_router
 from app.routers.quizzes.qiuzzes import router as quizzes_router
 from app.routers.quizzes.quiz_attempts import router as quiz_attempt_router
 from app.routers.quizzes.quiz_export import router as export_router
@@ -44,6 +46,10 @@ router.include_router(
 )
 router.include_router(health_router, prefix="", tags=["Health"])
 router.include_router(invitations_router, prefix="/invitations", tags=["Invitations"])
+router.include_router(
+    notification_router, prefix="/notifications", tags=["Notifications"]
+)
+router.include_router(websocket_router, tags=["WebSocket"])
 router.include_router(export_router, prefix="/export", tags=["Export"])
 router.include_router(requests_router, prefix="/requests", tags=["Requests"])
 router.include_router(users_router, prefix="/users", tags=["Users"])
