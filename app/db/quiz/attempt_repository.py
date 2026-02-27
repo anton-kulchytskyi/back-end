@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.db.base.base_repository import BaseRepository
 from app.models import QuizAttempt
+from app.models.company.company_member import CompanyMember
 
 MAX_EXPORT_LIMIT = 1_000_000
 
@@ -151,6 +152,34 @@ class QuizAttemptRepository(BaseRepository[QuizAttempt]):
                 selectinload(QuizAttempt.user_answers),
             ],
         )
+
+    async def get_users_without_recent_attempt(
+        self,
+        quiz_id: int,
+        company_id: int,
+        since: datetime,
+    ) -> list[int]:
+        """
+        Return user_ids of company members who have NOT completed quiz_id since `since`.
+
+        Uses a LEFT JOIN so we get members with no matching recent attempt in one query.
+        """
+        stmt = (
+            select(CompanyMember.user_id)
+            .outerjoin(
+                QuizAttempt,
+                (QuizAttempt.user_id == CompanyMember.user_id)
+                & (QuizAttempt.quiz_id == quiz_id)
+                & (QuizAttempt.completed_at >= since),
+            )
+            .where(
+                CompanyMember.company_id == company_id,
+                QuizAttempt.id.is_(None),
+            )
+        )
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 
     async def get_answers_for_export(
         self,
