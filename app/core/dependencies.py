@@ -23,6 +23,7 @@ from app.services.analytics.user_analytics_service import UserAnalyticsService
 from app.services.notification.notification_service import NotificationService
 from app.services.notification.websocket_service import WebSocketService
 from app.services.quiz.quiz_export_service import QuizExportService
+from app.services.quiz.quiz_import_service import QuizImportService
 
 
 def get_uow() -> AbstractUnitOfWork:
@@ -134,6 +135,18 @@ def get_quiz_attempt_service(
         permission_service=permission_service,
         quiz_service=quiz_service,
         redis_quiz_service=redis_quiz_service,
+    )
+
+
+def get_quiz_import_service(
+    uow: AbstractUnitOfWork = Depends(get_uow),
+    permission_service: PermissionService = Depends(get_permission_service),
+    quiz_service: QuizService = Depends(get_quiz_service),
+) -> QuizImportService:
+    return QuizImportService(
+        uow=uow,
+        permission_service=permission_service,
+        quiz_service=quiz_service,
     )
 
 

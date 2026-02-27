@@ -38,6 +38,15 @@ class QuizRepository(BaseRepository[Quiz]):
             ],
         )
 
+    async def get_by_title_and_company(
+        self, title: str, company_id: int
+    ) -> Optional[Quiz]:
+        """Find a quiz by exact title within a company."""
+        return await self.get_one_by_filters(
+            Quiz.title == title,
+            Quiz.company_id == company_id,
+        )
+
     async def refresh_after_create_or_update(self, quiz: Quiz) -> Quiz:
         """Refreshes a persistent Quiz object and ensures full eager loading."""
 
