@@ -13,6 +13,7 @@ from app.routers.notifications.websocket import router as websocket_router
 from app.routers.quizzes.qiuzzes import router as quizzes_router
 from app.routers.quizzes.quiz_attempts import router as quiz_attempt_router
 from app.routers.quizzes.quiz_export import router as export_router
+from app.routers.quizzes.quiz_import import router as quiz_import_router
 from app.routers.requests import router as requests_router
 from app.routers.users import router as users_router
 
@@ -40,6 +41,11 @@ router.include_router(
 )
 router.include_router(
     quizzes_router, prefix="/companies/{company_id}/quizzes", tags=["Quizzes"]
+)
+router.include_router(
+    quiz_import_router,
+    prefix="/companies/{company_id}/quizzes/import",
+    tags=["Quizzes"],
 )
 router.include_router(
     quiz_attempt_router, prefix="/quiz-attempts", tags=["Quiz Attempts"]

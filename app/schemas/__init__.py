@@ -37,6 +37,7 @@ from .quiz.quiz import (
     QuizUpdateRequest,
     QuizzesListResponse,
 )
+from .quiz.quiz_import import QuizImportResponse, QuizImportResult
 from .quiz.user_answer import QuizUserAnswerCreateRequest, QuizUserAnswerResponse
 from .user.auth import RefreshTokenRequest, TokenResponse
 from .user.user import (
@@ -101,4 +102,6 @@ __all__ = [
     "QuizAttemptSubmitRequest",
     "UserQuizStatisticsResponse",
     "RedisQuizAnswerData",
+    "QuizImportResult",
+    "QuizImportResponse",
 ]
