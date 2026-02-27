@@ -48,7 +48,6 @@ async def created_company(db_session: AsyncSession, owner: User, unit_of_work):
     return company
 
 
-@pytest.mark.asyncio
 async def test_create_company(db_session: AsyncSession, owner: User, unit_of_work):
     data = CompanyCreateRequest(name="NewCo", description="Some description")
     permission_service = PermissionService(uow=unit_of_work)
@@ -70,7 +69,6 @@ async def test_create_company(db_session: AsyncSession, owner: User, unit_of_wor
     assert member.role == Role.OWNER
 
 
-@pytest.mark.asyncio
 async def test_get_company_by_id(
     db_session: AsyncSession, created_company: Company, unit_of_work
 ):
@@ -84,7 +82,6 @@ async def test_get_company_by_id(
     assert company.name == created_company.name
 
 
-@pytest.mark.asyncio
 async def test_get_company_by_id_not_found(db_session: AsyncSession, unit_of_work):
     with pytest.raises(NotFoundException):
         permission_service = PermissionService(uow=unit_of_work)
@@ -95,7 +92,6 @@ async def test_get_company_by_id_not_found(db_session: AsyncSession, unit_of_wor
         await company_service.get_company_by_id(999)
 
 
-@pytest.mark.asyncio
 async def test_get_all_visible_companies(
     db_session: AsyncSession, owner: User, unit_of_work
 ):
@@ -127,7 +123,6 @@ async def test_get_all_visible_companies(
     assert all(c.is_visible for c in response.results)
 
 
-@pytest.mark.asyncio
 async def test_get_user_companies_paginated(
     db_session: AsyncSession, owner: User, unit_of_work
 ):
@@ -154,7 +149,6 @@ async def test_get_user_companies_paginated(
     assert all(c.owner_id == owner.id for c in response.results)
 
 
-@pytest.mark.asyncio
 async def test_update_company_owner(
     db_session: AsyncSession, created_company: Company, owner: User, unit_of_work
 ):
@@ -175,7 +169,6 @@ async def test_update_company_owner(
     assert updated.is_visible is False
 
 
-@pytest.mark.asyncio
 async def test_update_company_partial(
     db_session: AsyncSession, created_company: Company, owner: User, unit_of_work
 ):
@@ -193,7 +186,6 @@ async def test_update_company_partial(
     assert updated.description == created_company.description
 
 
-@pytest.mark.asyncio
 async def test_update_company_not_owner(
     db_session: AsyncSession, created_company: Company, member: User, unit_of_work
 ):
@@ -210,7 +202,6 @@ async def test_update_company_not_owner(
         await company_service.update_company(created_company, update_data, member.id)
 
 
-@pytest.mark.asyncio
 async def test_delete_company_owner(
     db_session: AsyncSession, created_company: Company, owner: User, unit_of_work
 ):
@@ -231,7 +222,6 @@ async def test_delete_company_owner(
         assert member is None
 
 
-@pytest.mark.asyncio
 async def test_delete_company_not_owner(
     db_session: AsyncSession, created_company: Company, member: User, unit_of_work
 ):

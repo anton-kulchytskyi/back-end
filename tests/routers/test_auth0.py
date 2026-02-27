@@ -1,4 +1,3 @@
-import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,7 +6,6 @@ from app.models import User
 # ==================== AUTH0 MOCK TESTS ====================
 
 
-@pytest.mark.asyncio
 async def test_auth0_token_creates_new_user(
     client: AsyncClient, db_session: AsyncSession, monkeypatch
 ):
@@ -49,7 +47,6 @@ async def test_auth0_token_creates_new_user(
     assert user.is_active is True
 
 
-@pytest.mark.asyncio
 async def test_auth0_token_existing_user(
     client: AsyncClient, test_user: User, monkeypatch
 ):
@@ -82,7 +79,6 @@ async def test_auth0_token_existing_user(
     assert data["id"] == test_user.id
 
 
-@pytest.mark.asyncio
 async def test_auth0_token_no_email(client: AsyncClient, monkeypatch):
     def mock_verify_auth0_token(token: str):
         return {
@@ -108,7 +104,6 @@ async def test_auth0_token_no_email(client: AsyncClient, monkeypatch):
     assert response.status_code == 401
 
 
-@pytest.mark.asyncio
 async def test_auth0_token_invalid(client: AsyncClient, monkeypatch):
     from app.core.auth0 import Auth0Error
 

@@ -1,11 +1,9 @@
-import pytest
 from httpx import AsyncClient
 
 from app.enums import Role, Status
 from app.models import Company, CompanyMember, Invitation, User
 
 
-@pytest.mark.asyncio
 async def test_get_my_invitations_empty(client: AsyncClient, test_user_token):
     response = await client.get(
         "/invitations/me",
@@ -15,7 +13,6 @@ async def test_get_my_invitations_empty(client: AsyncClient, test_user_token):
     assert response.json()["total"] == 0
 
 
-@pytest.mark.asyncio
 async def test_accept_invitation_route(
     client: AsyncClient, db_session, test_user, test_user_token
 ):
@@ -54,7 +51,44 @@ async def test_accept_invitation_route(
     assert response.json()["status"] == "accepted"
 
 
-@pytest.mark.asyncio
+async def test_decline_invitation_route(
+    client: AsyncClient, db_session, test_user, test_user_token
+):
+    owner = User(email="owner_d@test.com", full_name="Owner", hashed_password="1")
+    db_session.add(owner)
+    await db_session.flush()
+
+    company = Company(
+        name="DeclineCo",
+        description="Test description",
+        owner_id=owner.id,
+    )
+    db_session.add(company)
+    await db_session.flush()
+
+    db_session.add(
+        CompanyMember(company_id=company.id, user_id=owner.id, role=Role.OWNER)
+    )
+    await db_session.commit()
+
+    inv = Invitation(company_id=company.id, user_id=test_user.id, status=Status.PENDING)
+    db_session.add(inv)
+    await db_session.commit()
+
+    response = await client.post(
+        f"/invitations/{inv.id}/decline",
+        headers={"Authorization": f"Bearer {test_user_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "declined"
+
+
+async def test_get_my_invitations_empty_unauthorized(client: AsyncClient):
+    response = await client.get("/invitations/me")
+    assert response.status_code in (401, 403)
+
+
 async def test_get_my_invitations_pagination(
     client: AsyncClient,
     db_session,

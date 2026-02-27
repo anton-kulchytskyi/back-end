@@ -1,11 +1,9 @@
-import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User
 
 
-@pytest.mark.asyncio
 async def test_get_user_by_id(client: AsyncClient, test_user: User):
     response = await client.get(f"/users/{test_user.id}")
     assert response.status_code == 200
@@ -14,13 +12,11 @@ async def test_get_user_by_id(client: AsyncClient, test_user: User):
     assert data["full_name"] == test_user.full_name
 
 
-@pytest.mark.asyncio
 async def test_get_user_not_found(client: AsyncClient):
     response = await client.get("/users/99999")
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio
 async def test_get_all_users(client: AsyncClient, test_user: User):
     response = await client.get("/users")
     assert response.status_code == 200
@@ -34,7 +30,6 @@ async def test_get_all_users(client: AsyncClient, test_user: User):
     assert data["total"] >= 1
 
 
-@pytest.mark.asyncio
 async def test_get_all_users_pagination(client: AsyncClient, test_user: User):
     response = await client.get("/users?page=1&limit=5")
     assert response.status_code == 200
@@ -47,7 +42,6 @@ async def test_get_all_users_pagination(client: AsyncClient, test_user: User):
     assert isinstance(data["results"], list)
 
 
-@pytest.mark.asyncio
 async def test_update_user(
     client: AsyncClient, test_user: User, test_user_token: str, db_session: AsyncSession
 ):
@@ -68,7 +62,6 @@ async def test_update_user(
     assert updated.full_name == "Updated Name"
 
 
-@pytest.mark.asyncio
 async def test_update_user_password(
     client: AsyncClient, test_user: User, test_user_token: str, db_session: AsyncSession
 ):
@@ -93,7 +86,6 @@ async def test_update_user_password(
     assert verify_password("newpassword123", updated.hashed_password)
 
 
-@pytest.mark.asyncio
 async def test_delete_user(client: AsyncClient, test_user: User, test_user_token: str):
     response = await client.delete(
         "/users/me", headers={"Authorization": f"Bearer {test_user_token}"}
@@ -105,13 +97,11 @@ async def test_delete_user(client: AsyncClient, test_user: User, test_user_token
 # ===== BE #7 Validation Tests =====
 
 
-@pytest.mark.asyncio
 async def test_update_requires_authentication(client: AsyncClient):
     response = await client.put("/users/me", json={"full_name": "New Name"})
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_delete_requires_authentication(client: AsyncClient):
     response = await client.delete("/users/me")
     assert response.status_code == 403

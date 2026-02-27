@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 
-import pytest
 import pytest_asyncio
 from fakeredis.aioredis import FakeRedis
 
@@ -36,7 +35,6 @@ def redis_quiz_service(fake_redis):
 # ============================================================================
 
 
-@pytest.mark.asyncio
 async def test_save_answers_bulk_empty_list(redis_quiz_service, fake_redis):
     """Test that save_answers_bulk handles empty list gracefully."""
     # Act
@@ -47,7 +45,6 @@ async def test_save_answers_bulk_empty_list(redis_quiz_service, fake_redis):
     assert len(keys) == 0
 
 
-@pytest.mark.asyncio
 async def test_save_answers_bulk_multiple_answers(redis_quiz_service, fake_redis):
     """Test that save_answers_bulk saves multiple answers."""
     # Arrange
@@ -87,7 +84,6 @@ async def test_save_answers_bulk_multiple_answers(redis_quiz_service, fake_redis
     assert stored2["is_correct"] == "1"  # 2 % 2 == 0 (True)
 
 
-@pytest.mark.asyncio
 async def test_save_answers_bulk_sets_ttl_for_all(redis_quiz_service, fake_redis):
     """Test that save_answers_bulk sets TTL for all answers."""
     # Arrange
@@ -158,7 +154,6 @@ def test_ttl_constant_is_48_hours():
 # ============================================================================
 
 
-@pytest.mark.asyncio
 async def test_bulk_save_different_attempts(redis_quiz_service, fake_redis):
     """Test bulk save with answers from different attempts."""
     # Arrange - 2 attempts, 2 questions each

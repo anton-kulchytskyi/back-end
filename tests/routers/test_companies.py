@@ -1,4 +1,3 @@
-import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +7,6 @@ from app.services.companies.company_service import CompanyService
 from app.services.companies.permission_service import PermissionService
 
 
-@pytest.mark.asyncio
 async def test_create_company(client: AsyncClient, test_user_token: str):
     payload = {"name": "TestCo", "description": "Some description"}
 
@@ -27,13 +25,11 @@ async def test_create_company(client: AsyncClient, test_user_token: str):
     assert "owner_id" in data
 
 
-@pytest.mark.asyncio
 async def test_create_company_unauth(client: AsyncClient):
     response = await client.post("/companies", json={"name": "X", "description": "Y"})
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_get_companies_list(
     client: AsyncClient, db_session: AsyncSession, test_user_token: str
 ):
@@ -55,7 +51,6 @@ async def test_get_companies_list(
     assert data["limit"] == 10
 
 
-@pytest.mark.asyncio
 async def test_get_companies_pagination(client: AsyncClient, test_user_token: str):
     for i in range(5):
         await client.post(
@@ -72,7 +67,6 @@ async def test_get_companies_pagination(client: AsyncClient, test_user_token: st
     assert data["total_pages"] == 3
 
 
-@pytest.mark.asyncio
 async def test_get_companies_only_visible(
     client: AsyncClient, test_user_token: str, db_session: AsyncSession
 ):
@@ -105,7 +99,6 @@ async def test_get_companies_only_visible(
     assert data["results"][0]["id"] == visible_id
 
 
-@pytest.mark.asyncio
 async def test_get_company_by_id(client: AsyncClient, test_user_token: str):
     create = await client.post(
         "/companies",
@@ -119,13 +112,11 @@ async def test_get_company_by_id(client: AsyncClient, test_user_token: str):
     assert response.json()["id"] == company_id
 
 
-@pytest.mark.asyncio
 async def test_get_company_by_id_not_found(client: AsyncClient):
     response = await client.get("/companies/9999")
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio
 async def test_update_company_owner(client: AsyncClient, test_user_token: str):
     create = await client.post(
         "/companies",
@@ -144,7 +135,6 @@ async def test_update_company_owner(client: AsyncClient, test_user_token: str):
     assert response.json()["name"] == "After"
 
 
-@pytest.mark.asyncio
 async def test_update_company_visibility(client: AsyncClient, test_user_token: str):
     create = await client.post(
         "/companies",
@@ -163,7 +153,6 @@ async def test_update_company_visibility(client: AsyncClient, test_user_token: s
     assert response.json()["is_visible"] is False
 
 
-@pytest.mark.asyncio
 async def test_update_company_not_owner(
     client: AsyncClient, test_user_token: str, db_session: AsyncSession, unit_of_work
 ):
@@ -189,7 +178,6 @@ async def test_update_company_not_owner(
     assert resp.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_delete_company_owner(client: AsyncClient, test_user_token: str):
     create = await client.post(
         "/companies",
@@ -209,7 +197,6 @@ async def test_delete_company_owner(client: AsyncClient, test_user_token: str):
     assert get_resp.status_code == 404
 
 
-@pytest.mark.asyncio
 async def test_delete_company_not_owner(
     client: AsyncClient, test_user_token: str, db_session: AsyncSession, unit_of_work
 ):

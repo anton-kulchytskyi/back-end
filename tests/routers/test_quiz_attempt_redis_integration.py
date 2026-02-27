@@ -1,9 +1,7 @@
-import pytest
 from fakeredis.aioredis import FakeRedis
 from httpx import AsyncClient
 
 
-@pytest.mark.asyncio
 async def test_quiz_attempt_stores_answers_in_redis(
     client: AsyncClient,
     test_user,
@@ -52,7 +50,6 @@ async def test_quiz_attempt_stores_answers_in_redis(
     assert data["is_correct"] in ("0", "1")
 
 
-@pytest.mark.asyncio
 async def test_quiz_attempt_correct_answer_flags(
     client: AsyncClient,
     test_user,
@@ -116,7 +113,6 @@ async def test_quiz_attempt_correct_answer_flags(
     assert wrong_count == 1
 
 
-@pytest.mark.asyncio
 async def test_quiz_attempt_stores_all_required_fields(
     client: AsyncClient,
     test_user,
@@ -186,7 +182,6 @@ async def test_quiz_attempt_stores_all_required_fields(
     assert "T" in data["answered_at"]
 
 
-@pytest.mark.asyncio
 async def test_multiple_attempts_create_separate_redis_keys(
     client: AsyncClient,
     test_user,

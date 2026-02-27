@@ -1,4 +1,3 @@
-import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,7 +5,6 @@ from app.enums import Role
 from app.models import Company, CompanyMember, User
 
 
-@pytest.mark.asyncio
 async def test_appoint_admin_success(
     client: AsyncClient,
     test_user_token: str,
@@ -26,7 +24,6 @@ async def test_appoint_admin_success(
     assert data["role"] == Role.ADMIN.value
 
 
-@pytest.mark.asyncio
 async def test_appoint_admin_already_admin(
     client: AsyncClient,
     test_user_token: str,
@@ -44,7 +41,6 @@ async def test_appoint_admin_already_admin(
     assert data["role"] == Role.ADMIN.value
 
 
-@pytest.mark.asyncio
 async def test_appoint_admin_not_member(
     client: AsyncClient,
     test_user_token: str,
@@ -73,7 +69,6 @@ async def test_appoint_admin_not_member(
     assert "not a member" in response.json()["detail"].lower()
 
 
-@pytest.mark.asyncio
 async def test_appoint_admin_not_owner(
     client: AsyncClient,
     test_member_user: User,
@@ -100,7 +95,6 @@ async def test_appoint_admin_not_owner(
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_appoint_admin_company_not_found(
     client: AsyncClient,
     test_user_token: str,
@@ -115,7 +109,6 @@ async def test_appoint_admin_company_not_found(
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio
 async def test_appoint_admin_unauthorized(
     client: AsyncClient,
     company_with_member: Company,
@@ -132,7 +125,6 @@ async def test_appoint_admin_unauthorized(
 # ==================== REMOVE ADMIN TESTS ====================
 
 
-@pytest.mark.asyncio
 async def test_remove_admin_success(
     client: AsyncClient,
     test_user_token: str,
@@ -152,7 +144,6 @@ async def test_remove_admin_success(
     assert data["role"] == Role.MEMBER.value
 
 
-@pytest.mark.asyncio
 async def test_remove_admin_not_admin(
     client: AsyncClient,
     test_user_token: str,
@@ -169,7 +160,6 @@ async def test_remove_admin_not_admin(
     assert "not an admin" in response.json()["detail"].lower()
 
 
-@pytest.mark.asyncio
 async def test_remove_admin_not_member(
     client: AsyncClient,
     test_user_token: str,
@@ -198,7 +188,6 @@ async def test_remove_admin_not_member(
     assert "not a member" in response.json()["detail"].lower()
 
 
-@pytest.mark.asyncio
 async def test_remove_admin_not_owner(
     client: AsyncClient,
     test_admin_user: User,
@@ -225,7 +214,6 @@ async def test_remove_admin_not_owner(
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_remove_admin_company_not_found(
     client: AsyncClient,
     test_user_token: str,
@@ -240,7 +228,6 @@ async def test_remove_admin_company_not_found(
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio
 async def test_remove_admin_unauthorized(
     client: AsyncClient,
     company_with_admin: Company,
@@ -257,7 +244,6 @@ async def test_remove_admin_unauthorized(
 # ==================== GET ADMINS TESTS ====================
 
 
-@pytest.mark.asyncio
 async def test_get_admins_success(
     client: AsyncClient,
     test_user_token: str,
@@ -279,7 +265,6 @@ async def test_get_admins_success(
     assert all(m["role"] == Role.ADMIN.value for m in data["results"])
 
 
-@pytest.mark.asyncio
 async def test_get_admins_pagination(
     client: AsyncClient,
     test_user_token: str,
@@ -324,7 +309,6 @@ async def test_get_admins_pagination(
     assert data["total"] >= 6  # 1 original + 5 new
 
 
-@pytest.mark.asyncio
 async def test_get_admins_empty(
     client: AsyncClient,
     test_user_token: str,
@@ -344,7 +328,6 @@ async def test_get_admins_empty(
     assert len(data["results"]) == 0
 
 
-@pytest.mark.asyncio
 async def test_get_admins_member_can_view(
     client: AsyncClient,
     test_member_user: User,
@@ -375,7 +358,6 @@ async def test_get_admins_member_can_view(
     assert isinstance(data["results"], list)
 
 
-@pytest.mark.asyncio
 async def test_get_admins_non_member_cannot_view(
     client: AsyncClient,
     test_company: Company,
@@ -411,7 +393,6 @@ async def test_get_admins_non_member_cannot_view(
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_get_admins_company_not_found(
     client: AsyncClient,
     test_user_token: str,
@@ -425,7 +406,6 @@ async def test_get_admins_company_not_found(
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio
 async def test_get_admins_unauthorized(
     client: AsyncClient,
     test_company: Company,
@@ -441,7 +421,6 @@ async def test_get_admins_unauthorized(
 # ==================== EDGE CASES ====================
 
 
-@pytest.mark.asyncio
 async def test_cannot_promote_owner_to_admin(
     client: AsyncClient,
     test_user_token: str,
@@ -458,7 +437,6 @@ async def test_cannot_promote_owner_to_admin(
     assert response.status_code in [200, 400]
 
 
-@pytest.mark.asyncio
 async def test_multiple_admins_in_company(
     client: AsyncClient,
     test_user_token: str,

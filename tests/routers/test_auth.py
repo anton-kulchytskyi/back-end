@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-import pytest
 from httpx import AsyncClient
 
 from app.models import User
@@ -8,7 +7,6 @@ from app.models import User
 # ==================== REGISTRATION TESTS ====================
 
 
-@pytest.mark.asyncio
 async def test_register_user(client: AsyncClient):
     user_data = {
         "email": "newuser@example.com",
@@ -28,7 +26,6 @@ async def test_register_user(client: AsyncClient):
     assert "hashed_password" not in data
 
 
-@pytest.mark.asyncio
 async def test_register_user_duplicate_email(client: AsyncClient, test_user: User):
     user_data = {
         "email": test_user.email,
@@ -42,7 +39,6 @@ async def test_register_user_duplicate_email(client: AsyncClient, test_user: Use
     assert "already exists" in response.json()["detail"]
 
 
-@pytest.mark.asyncio
 async def test_register_user_invalid_email(client: AsyncClient):
     user_data = {
         "email": "invalid-email",
@@ -55,7 +51,6 @@ async def test_register_user_invalid_email(client: AsyncClient):
     assert response.status_code == 422
 
 
-@pytest.mark.asyncio
 async def test_register_user_short_password(client: AsyncClient):
     user_data = {
         "email": "test@example.com",
@@ -71,7 +66,6 @@ async def test_register_user_short_password(client: AsyncClient):
 # ==================== LOGIN TESTS ====================
 
 
-@pytest.mark.asyncio
 async def test_login_success(client: AsyncClient, test_user: User):
     login_data = {
         "username": test_user.email,
@@ -87,7 +81,6 @@ async def test_login_success(client: AsyncClient, test_user: User):
     assert len(data["access_token"]) > 0
 
 
-@pytest.mark.asyncio
 async def test_login_invalid_email(client: AsyncClient):
     login_data = {
         "username": "nonexistent@example.com",
@@ -100,7 +93,6 @@ async def test_login_invalid_email(client: AsyncClient):
     assert "Invalid email or password" in response.json()["detail"]
 
 
-@pytest.mark.asyncio
 async def test_login_invalid_password(client: AsyncClient, test_user: User):
     login_data = {
         "username": test_user.email,
@@ -116,7 +108,6 @@ async def test_login_invalid_password(client: AsyncClient, test_user: User):
 # ==================== /ME ENDPOINT TESTS ====================
 
 
-@pytest.mark.asyncio
 async def test_get_me_success(client: AsyncClient, test_user_token: str):
     response = await client.get(
         "/auth/me", headers={"Authorization": f"Bearer {test_user_token}"}
@@ -129,14 +120,12 @@ async def test_get_me_success(client: AsyncClient, test_user_token: str):
     assert "hashed_password" not in data
 
 
-@pytest.mark.asyncio
 async def test_get_me_no_token(client: AsyncClient):
     response = await client.get("/auth/me")
 
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_get_me_invalid_token(client: AsyncClient):
     response = await client.get(
         "/auth/me", headers={"Authorization": "Bearer invalid_token_here"}
@@ -145,7 +134,6 @@ async def test_get_me_invalid_token(client: AsyncClient):
     assert response.status_code == 401
 
 
-@pytest.mark.asyncio
 async def test_get_me_expired_token(client: AsyncClient, test_user: User):
     from app.core.security import create_access_token
 
@@ -163,7 +151,6 @@ async def test_get_me_expired_token(client: AsyncClient, test_user: User):
 # ==================== REFRESH TOKEN TESTS ====================
 
 
-@pytest.mark.asyncio
 async def test_refresh_success(client: AsyncClient, test_user: User):
     login_data = {"username": test_user.email, "password": "testpassword123"}
     login_response = await client.post("/auth/login", data=login_data)
@@ -185,7 +172,6 @@ async def test_refresh_success(client: AsyncClient, test_user: User):
     assert data["refresh_token"] != tokens["refresh_token"]
 
 
-@pytest.mark.asyncio
 async def test_refresh_invalid_token(client: AsyncClient):
     response = await client.post(
         "/auth/refresh", json={"refresh_token": "invalid_token_here"}
@@ -194,7 +180,6 @@ async def test_refresh_invalid_token(client: AsyncClient):
     assert "Invalid" in response.json()["detail"]
 
 
-@pytest.mark.asyncio
 async def test_refresh_expired_token(client: AsyncClient, test_user: User):
     from datetime import timedelta
 
@@ -211,7 +196,6 @@ async def test_refresh_expired_token(client: AsyncClient, test_user: User):
     assert "expired" in response.json()["detail"].lower()
 
 
-@pytest.mark.asyncio
 async def test_refresh_user_not_found(client: AsyncClient):
     from app.core.security import create_refresh_token
 
