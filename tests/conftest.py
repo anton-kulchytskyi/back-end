@@ -37,7 +37,7 @@ test_engine = create_async_engine(
 TestSessionLocal = async_sessionmaker(expire_on_commit=False, class_=AsyncSession)
 
 
-class TestSQLAlchemyUnitOfWork(AbstractUnitOfWork):
+class MockUnitOfWork(AbstractUnitOfWork):
     def __init__(self, session: AsyncSession):
         self.session = session
 
@@ -113,13 +113,13 @@ async def db_session(db_connection: AsyncConnection):
 
 @pytest_asyncio.fixture(scope="function")
 async def unit_of_work(db_session):
-    async with TestSQLAlchemyUnitOfWork(db_session) as uow:
+    async with MockUnitOfWork(db_session) as uow:
         yield uow
 
 
 @pytest_asyncio.fixture(scope="function")
 async def override_dependencies_fixture(db_session: AsyncSession):
-    test_uow = TestSQLAlchemyUnitOfWork(db_session)
+    test_uow = MockUnitOfWork(db_session)
 
     def override_get_uow():
         return test_uow
@@ -445,10 +445,3 @@ async def test_members(
 
     await db_session.commit()
     return members
-
-
-# ==================== PYTEST CONFIGURATION ====================
-
-
-def pytest_configure(config):
-    config.addinivalue_line("markers", "asyncio: mark test as async")

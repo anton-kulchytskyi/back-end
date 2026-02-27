@@ -2,7 +2,6 @@
 
 from datetime import datetime, timedelta, timezone
 
-import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +11,7 @@ from app.models import Company, CompanyMember, User
 from app.models.quiz.quiz import Quiz
 from app.models.quiz.quiz_attempt import QuizAttempt
 from app.services.scheduler.quiz_reminder_service import QuizReminderService
-from tests.conftest import TestSQLAlchemyUnitOfWork
+from tests.conftest import MockUnitOfWork
 
 # ==================== FIXTURES ====================
 
@@ -20,7 +19,7 @@ from tests.conftest import TestSQLAlchemyUnitOfWork
 @pytest_asyncio.fixture
 async def reminder_service(db_session: AsyncSession) -> QuizReminderService:
     def uow_factory():
-        return TestSQLAlchemyUnitOfWork(db_session)
+        return MockUnitOfWork(db_session)
 
     return QuizReminderService(uow_factory=uow_factory)
 
@@ -74,7 +73,6 @@ async def company_with_quiz_and_members(db_session: AsyncSession):
 # ==================== TESTS ====================
 
 
-@pytest.mark.asyncio
 async def test_sends_reminders_to_all_members_when_no_attempts(
     reminder_service: QuizReminderService,
     company_with_quiz_and_members: dict,
@@ -86,7 +84,6 @@ async def test_sends_reminders_to_all_members_when_no_attempts(
     assert result == 3
 
 
-@pytest.mark.asyncio
 async def test_skips_user_with_recent_attempt(
     reminder_service: QuizReminderService,
     company_with_quiz_and_members: dict,
@@ -115,7 +112,6 @@ async def test_skips_user_with_recent_attempt(
     assert result == 2
 
 
-@pytest.mark.asyncio
 async def test_sends_reminder_to_user_with_old_attempt(
     reminder_service: QuizReminderService,
     company_with_quiz_and_members: dict,
@@ -144,7 +140,6 @@ async def test_sends_reminder_to_user_with_old_attempt(
     assert result == 3
 
 
-@pytest.mark.asyncio
 async def test_no_notifications_when_no_quizzes(
     reminder_service: QuizReminderService,
 ):
@@ -154,7 +149,6 @@ async def test_no_notifications_when_no_quizzes(
     assert result == 0
 
 
-@pytest.mark.asyncio
 async def test_notification_message_contains_quiz_title(
     reminder_service: QuizReminderService,
     company_with_quiz_and_members: dict,

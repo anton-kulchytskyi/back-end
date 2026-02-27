@@ -1,11 +1,9 @@
-import pytest
 from httpx import AsyncClient
 
 from app.enums import Role
 from app.models import Company, CompanyMember, User
 
 
-@pytest.mark.asyncio
 async def test_owner_removes_member(client, db_session, test_user, test_user_token):
     owner = test_user
 
@@ -46,7 +44,6 @@ async def test_owner_removes_member(client, db_session, test_user, test_user_tok
     assert result.first() is None
 
 
-@pytest.mark.asyncio
 async def test_owner_cannot_remove_owner(
     client, db_session, test_user, test_user_token
 ):
@@ -71,7 +68,6 @@ async def test_owner_cannot_remove_owner(
     assert response.status_code == 400 or response.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_non_owner_cannot_remove_member(
     client, db_session, test_user, test_user_token
 ):
@@ -110,7 +106,6 @@ async def test_non_owner_cannot_remove_member(
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_member_leaves_company(client, db_session, test_user, test_user_token):
     user = test_user
 
@@ -146,7 +141,6 @@ async def test_member_leaves_company(client, db_session, test_user, test_user_to
     assert result.first() is None
 
 
-@pytest.mark.asyncio
 async def test_owner_cannot_leave_company(client, db_session, test_user):
     """
     Owner MUST NOT be able to leave company.
@@ -172,7 +166,6 @@ async def test_owner_cannot_leave_company(client, db_session, test_user):
     assert response.status_code in (400, 401, 403)
 
 
-@pytest.mark.asyncio
 async def test_non_member_cannot_leave_company(
     client, db_session, test_user, test_user_token
 ):
@@ -195,7 +188,6 @@ async def test_non_member_cannot_leave_company(
     assert response.status_code in (400, 404, 403)
 
 
-@pytest.mark.asyncio
 async def test_owner_send_invitation(
     client: AsyncClient, db_session, test_user, test_user_token
 ):
@@ -227,7 +219,6 @@ async def test_owner_send_invitation(
     assert response.json()["user_id"] == other.id
 
 
-@pytest.mark.asyncio
 async def test_owner_get_company_requests_pagination(
     client: AsyncClient, db_session, test_user, test_user_token
 ):
@@ -253,7 +244,6 @@ async def test_owner_get_company_requests_pagination(
     assert response.status_code == 200
 
 
-@pytest.mark.asyncio
 async def test_get_company_members_success(client, db_session):
     owner = User(email="o@test.com", full_name="Owner", hashed_password="123")
     member1 = User(email="m1@test.com", full_name="Member1", hashed_password="123")
@@ -290,7 +280,6 @@ async def test_get_company_members_success(client, db_session):
     assert body["limit"] == 10
 
 
-@pytest.mark.asyncio
 async def test_get_company_members_not_found(client):
     response = await client.get("/companies/99999/members")
     assert response.status_code == 404

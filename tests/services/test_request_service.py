@@ -1,4 +1,3 @@
-import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enums import Role, Status
@@ -7,7 +6,6 @@ from app.services.companies.permission_service import PermissionService
 from app.services.companies.request_service import RequestService
 
 
-@pytest.mark.asyncio
 async def test_create_request_success(db_session: AsyncSession, unit_of_work):
     uow = unit_of_work
     service = RequestService(uow, PermissionService(uow))
@@ -32,7 +30,6 @@ async def test_create_request_success(db_session: AsyncSession, unit_of_work):
     assert req.status == Status.PENDING
 
 
-@pytest.mark.asyncio
 async def test_cancel_request_success(db_session: AsyncSession, unit_of_work):
     uow = unit_of_work
     service = RequestService(uow, PermissionService(uow))
@@ -55,7 +52,6 @@ async def test_cancel_request_success(db_session: AsyncSession, unit_of_work):
     assert updated.status == Status.CANCELED
 
 
-@pytest.mark.asyncio
 async def test_accept_request_owner_only(db_session: AsyncSession, unit_of_work):
     uow = unit_of_work
     service = RequestService(uow, PermissionService(uow))

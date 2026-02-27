@@ -1,6 +1,5 @@
 """Tests for quiz endpoints."""
 
-import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,33 +8,6 @@ from app.models import Company, Quiz, User
 
 # Fixtures
 # ============================================================================
-
-
-@pytest_asyncio.fixture
-async def test_company(db_session: AsyncSession, test_user: User) -> Company:
-    """Create test company and automatically add owner as company member."""
-    from app.enums import Role
-    from app.models import CompanyMember
-
-    company = Company(
-        name="Test Company",
-        description="Test Description",
-        owner_id=test_user.id,
-    )
-    db_session.add(company)
-    await db_session.flush()
-
-    owner_member = CompanyMember(
-        company_id=company.id,
-        user_id=test_user.id,
-        role=Role.OWNER,
-    )
-    db_session.add(owner_member)
-
-    await db_session.commit()
-    await db_session.refresh(company)
-
-    return company
 
 
 @pytest_asyncio.fixture
@@ -150,7 +122,6 @@ def valid_quiz_data() -> dict:
 # ============================================================================
 
 
-@pytest.mark.asyncio
 async def test_create_quiz_success(
     client: AsyncClient,
     test_company: Company,
@@ -180,7 +151,6 @@ async def test_create_quiz_success(
     assert data["questions"][0]["answers"][1]["is_correct"] is False
 
 
-@pytest.mark.asyncio
 async def test_create_quiz_without_auth(
     client: AsyncClient, test_company: Company, valid_quiz_data: dict
 ):
@@ -193,7 +163,6 @@ async def test_create_quiz_without_auth(
     assert response.status_code in (401, 403)
 
 
-@pytest.mark.asyncio
 async def test_create_quiz_not_owner_or_admin(
     client: AsyncClient,
     test_company: Company,
@@ -243,7 +212,6 @@ async def test_create_quiz_not_owner_or_admin(
     assert response.status_code in (401, 403)
 
 
-@pytest.mark.asyncio
 async def test_create_quiz_validation_min_questions(
     client: AsyncClient,
     test_company: Company,
@@ -271,7 +239,6 @@ async def test_create_quiz_validation_min_questions(
     assert response.status_code == 422
 
 
-@pytest.mark.asyncio
 async def test_create_quiz_validation_min_answers(
     client: AsyncClient,
     test_company: Company,
@@ -305,7 +272,6 @@ async def test_create_quiz_validation_min_answers(
     assert response.status_code == 422
 
 
-@pytest.mark.asyncio
 async def test_create_quiz_validation_no_correct_answer(
     client: AsyncClient,
     test_company: Company,
@@ -340,7 +306,6 @@ async def test_create_quiz_validation_no_correct_answer(
     assert response.status_code == 422
 
 
-@pytest.mark.asyncio
 async def test_get_company_quizzes(
     client: AsyncClient,
     test_company: Company,
@@ -364,7 +329,6 @@ async def test_get_company_quizzes(
     assert "questions" not in quiz_data
 
 
-@pytest.mark.asyncio
 async def test_get_company_quizzes_pagination(
     client: AsyncClient,
     test_company: Company,
@@ -379,7 +343,6 @@ async def test_get_company_quizzes_pagination(
     assert data["limit"] == 5
 
 
-@pytest.mark.asyncio
 async def test_get_company_quizzes_empty(
     client: AsyncClient,
     test_company: Company,
@@ -394,7 +357,6 @@ async def test_get_company_quizzes_empty(
     assert len(data["results"]) == 0
 
 
-@pytest.mark.asyncio
 async def test_get_quiz_detail(
     client: AsyncClient,
     test_company: Company,
@@ -420,7 +382,6 @@ async def test_get_quiz_detail(
     assert "is_correct" in data["questions"][0]["answers"][0]
 
 
-@pytest.mark.asyncio
 async def test_get_quiz_not_found(
     client: AsyncClient,
     test_company: Company,
@@ -435,7 +396,6 @@ async def test_get_quiz_not_found(
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio
 async def test_get_quiz_for_taking(
     client: AsyncClient,
     test_company: Company,
@@ -463,7 +423,6 @@ async def test_get_quiz_for_taking(
     assert "id" in answers[0]
 
 
-@pytest.mark.asyncio
 async def test_get_quiz_for_taking_requires_auth(
     client: AsyncClient,
     test_company: Company,
@@ -479,7 +438,6 @@ async def test_get_quiz_for_taking_requires_auth(
     assert response.status_code in (401, 403)
 
 
-@pytest.mark.asyncio
 async def test_update_quiz_title(
     client: AsyncClient,
     test_company: Company,
@@ -501,7 +459,6 @@ async def test_update_quiz_title(
     assert len(data["questions"]) == 2
 
 
-@pytest.mark.asyncio
 async def test_update_quiz_questions(
     client: AsyncClient,
     test_company: Company,
@@ -540,7 +497,6 @@ async def test_update_quiz_questions(
     assert data["questions"][1]["title"] == "New Question 2"
 
 
-@pytest.mark.asyncio
 async def test_update_quiz_without_auth(
     client: AsyncClient,
     test_company: Company,
@@ -555,7 +511,6 @@ async def test_update_quiz_without_auth(
     assert response.status_code in (401, 403)
 
 
-@pytest.mark.asyncio
 async def test_update_quiz_not_found(
     client: AsyncClient,
     test_company: Company,
@@ -571,7 +526,6 @@ async def test_update_quiz_not_found(
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio
 async def test_delete_quiz_success(
     client: AsyncClient,
     test_company: Company,
@@ -593,7 +547,6 @@ async def test_delete_quiz_success(
     assert get_response.status_code == 404
 
 
-@pytest.mark.asyncio
 async def test_delete_quiz_without_auth(
     client: AsyncClient,
     test_company: Company,
@@ -607,7 +560,6 @@ async def test_delete_quiz_without_auth(
     assert response.status_code in (401, 403)
 
 
-@pytest.mark.asyncio
 async def test_delete_quiz_not_found(
     client: AsyncClient,
     test_company: Company,

@@ -49,7 +49,6 @@ async def owner_membership(
     return member
 
 
-@pytest.mark.asyncio
 async def test_get_role_owner(
     db_session: AsyncSession,
     test_company: Company,
@@ -62,7 +61,6 @@ async def test_get_role_owner(
     assert role == "owner"
 
 
-@pytest.mark.asyncio
 async def test_get_role_no_membership(
     test_company: Company, regular_user: User, unit_of_work
 ):
@@ -71,7 +69,6 @@ async def test_get_role_no_membership(
     assert role is None
 
 
-@pytest.mark.asyncio
 async def test_require_owner_success(
     db_session: AsyncSession,
     test_company: Company,
@@ -83,7 +80,6 @@ async def test_require_owner_success(
     await permission_service.require_owner(test_company.id, owner_user.id)
 
 
-@pytest.mark.asyncio
 async def test_require_owner_fails_for_non_owner(
     test_company: Company, regular_user: User, unit_of_work
 ):
@@ -95,7 +91,6 @@ async def test_require_owner_fails_for_non_owner(
         await permission_service.require_owner(test_company.id, regular_user.id)
 
 
-@pytest.mark.asyncio
 async def test_require_admin_success_for_owner(
     db_session: AsyncSession,
     test_company: Company,
@@ -107,7 +102,6 @@ async def test_require_admin_success_for_owner(
     await permission_service.require_admin(test_company.id, owner_user.id)
 
 
-@pytest.mark.asyncio
 async def test_require_admin_fails_for_regular_user(
     test_company: Company, regular_user: User, unit_of_work
 ):
@@ -119,7 +113,6 @@ async def test_require_admin_fails_for_regular_user(
         await permission_service.require_admin(test_company.id, regular_user.id)
 
 
-@pytest.mark.asyncio
 async def test_require_member_fails_for_non_member(
     test_company: Company, regular_user: User, unit_of_work
 ):
@@ -131,7 +124,6 @@ async def test_require_member_fails_for_non_member(
         await permission_service.require_member(test_company.id, regular_user.id)
 
 
-@pytest.mark.asyncio
 async def test_require_member_success_for_owner(
     test_company: Company,
     owner_user: User,

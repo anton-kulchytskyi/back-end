@@ -1,4 +1,3 @@
-import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enums import Role, Status
@@ -7,7 +6,6 @@ from app.services.companies.invitation_service import InvitationService
 from app.services.companies.permission_service import PermissionService
 
 
-@pytest.mark.asyncio
 async def test_send_invitation_success(db_session: AsyncSession, unit_of_work):
     uow = unit_of_work
     service = InvitationService(uow, PermissionService(uow))
@@ -41,7 +39,6 @@ async def test_send_invitation_success(db_session: AsyncSession, unit_of_work):
     assert inv.status == Status.PENDING
 
 
-@pytest.mark.asyncio
 async def test_accept_invitation_user_only(db_session: AsyncSession, unit_of_work):
     uow = unit_of_work
     service = InvitationService(uow, PermissionService(uow))
@@ -74,7 +71,6 @@ async def test_accept_invitation_user_only(db_session: AsyncSession, unit_of_wor
     assert accepted.status == Status.ACCEPTED
 
 
-@pytest.mark.asyncio
 async def test_decline_invitation_user_only(db_session: AsyncSession, unit_of_work):
     uow = unit_of_work
     service = InvitationService(uow, PermissionService(uow))

@@ -1,8 +1,6 @@
-import pytest
 from httpx import AsyncClient
 
 
-@pytest.mark.asyncio
 async def test_export_me_json(
     client: AsyncClient,
     test_user,
@@ -41,7 +39,6 @@ async def test_export_me_json(
     assert body["metadata"]["total_answers"] == 2
 
 
-@pytest.mark.asyncio
 async def test_export_me_csv(
     client: AsyncClient,
     test_user_token,
@@ -72,7 +69,6 @@ async def test_export_me_csv(
     assert "quiz_id" in response.text
 
 
-@pytest.mark.asyncio
 async def test_export_company_as_admin(
     client: AsyncClient,
     test_admin_token,
@@ -105,7 +101,6 @@ async def test_export_company_as_admin(
     assert response.json()["metadata"]["total_answers"] == len(test_quiz.questions)
 
 
-@pytest.mark.asyncio
 async def test_export_company_forbidden_for_member(
     client: AsyncClient,
     test_member_token,
@@ -119,7 +114,6 @@ async def test_export_company_forbidden_for_member(
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_export_company_filter_by_quiz(
     client: AsyncClient,
     test_admin_token,
@@ -150,7 +144,6 @@ async def test_export_company_filter_by_quiz(
     assert response.json()["metadata"]["quiz_id"] == test_quiz.id
 
 
-@pytest.mark.asyncio
 async def test_export_company_filter_by_user(
     client: AsyncClient,
     test_admin_token,
@@ -182,7 +175,6 @@ async def test_export_company_filter_by_user(
     assert response.json()["metadata"]["user_id"] == test_user.id
 
 
-@pytest.mark.asyncio
 async def test_export_company_wrong_quiz_rejected(
     client: AsyncClient,
     test_admin_token,
@@ -196,7 +188,6 @@ async def test_export_company_wrong_quiz_rejected(
     assert response.status_code in (400, 404)
 
 
-@pytest.mark.asyncio
 async def test_export_me_empty(client, test_user_token):
     response = await client.get(
         "/export/me?format=json", headers={"Authorization": f"Bearer {test_user_token}"}

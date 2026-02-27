@@ -7,21 +7,6 @@ from app.models import Company, Quiz, QuizAnswer, QuizAttempt, QuizQuestion, Use
 
 
 @pytest_asyncio.fixture
-async def test_company(db_session: AsyncSession) -> Company:
-    """Create a test company (visible by default)."""
-    company = Company(
-        name="Test Company",
-        description="Test Description",
-        owner_id=1,
-        is_visible=True,
-    )
-    db_session.add(company)
-    await db_session.commit()
-    await db_session.refresh(company)
-    return company
-
-
-@pytest_asyncio.fixture
 async def test_hidden_company(db_session: AsyncSession) -> Company:
     """Create a hidden test company."""
     company = Company(
@@ -37,13 +22,15 @@ async def test_hidden_company(db_session: AsyncSession) -> Company:
 
 
 @pytest_asyncio.fixture
-async def test_quiz(db_session: AsyncSession, test_company: Company) -> Quiz:
+async def test_quiz(
+    db_session: AsyncSession, test_company: Company, test_user: User
+) -> Quiz:
     """Create a test quiz with 3 questions."""
     quiz = Quiz(
         title="Python Basics",
         description="Test your Python knowledge",
         company_id=test_company.id,
-        created_by=1,
+        created_by=test_user.id,
     )
     db_session.add(quiz)
     await db_session.flush()
@@ -150,7 +137,6 @@ async def company_admin_token(client: AsyncClient, company_admin: User):
 # ============================================================================
 
 
-@pytest.mark.asyncio
 async def test_submit_quiz_attempt_all_correct(
     client: AsyncClient,
     test_user_token: str,
@@ -200,7 +186,6 @@ async def test_submit_quiz_attempt_all_correct(
     assert data["company"]["id"] == test_quiz.company_id
 
 
-@pytest.mark.asyncio
 async def test_submit_quiz_attempt_partial_correct(
     client: AsyncClient,
     test_user_token: str,
@@ -245,7 +230,6 @@ async def test_submit_quiz_attempt_partial_correct(
     assert data["is_completed"] is True
 
 
-@pytest.mark.asyncio
 async def test_submit_quiz_attempt_all_wrong(
     client: AsyncClient,
     test_user_token: str,
@@ -298,7 +282,6 @@ async def test_submit_quiz_attempt_all_wrong(
 # ============================================================================
 
 
-@pytest.mark.asyncio
 async def test_submit_quiz_attempt_hidden_company(
     client: AsyncClient,
     test_user_token: str,
@@ -327,7 +310,6 @@ async def test_submit_quiz_attempt_hidden_company(
     assert response.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_submit_hidden_company_as_admin(
     client: AsyncClient,
     company_admin_token: str,
@@ -355,7 +337,6 @@ async def test_submit_hidden_company_as_admin(
     assert body["quiz_id"] == test_quiz_hidden.id
 
 
-@pytest.mark.asyncio
 async def test_submit_quiz_attempt_unauthorized(
     client: AsyncClient,
     test_quiz: Quiz,
@@ -381,7 +362,6 @@ async def test_submit_quiz_attempt_unauthorized(
     assert response.status_code in (401, 403)
 
 
-@pytest.mark.asyncio
 async def test_submit_quiz_attempt_missing_answers(
     client: AsyncClient,
     test_user_token: str,
@@ -410,7 +390,6 @@ async def test_submit_quiz_attempt_missing_answers(
     assert "must answer all" in response.json()["detail"].lower()
 
 
-@pytest.mark.asyncio
 async def test_submit_quiz_attempt_duplicate_question(
     client: AsyncClient,
     test_user_token: str,
@@ -442,7 +421,6 @@ async def test_submit_quiz_attempt_duplicate_question(
     assert "same question multiple times" in response.json()["detail"].lower()
 
 
-@pytest.mark.asyncio
 async def test_submit_quiz_attempt_invalid_question_id(
     client: AsyncClient,
     test_user_token: str,
@@ -474,7 +452,6 @@ async def test_submit_quiz_attempt_invalid_question_id(
     assert "does not belong" in response.json()["detail"].lower()
 
 
-@pytest.mark.asyncio
 async def test_submit_quiz_attempt_invalid_answer_id(
     client: AsyncClient,
     test_user_token: str,
@@ -503,7 +480,6 @@ async def test_submit_quiz_attempt_invalid_answer_id(
     assert "does not belong" in response.json()["detail"].lower()
 
 
-@pytest.mark.asyncio
 async def test_submit_quiz_attempt_quiz_not_found(
     client: AsyncClient,
     test_user_token: str,
@@ -529,7 +505,6 @@ async def test_submit_quiz_attempt_quiz_not_found(
 # ============================================================================
 
 
-@pytest.mark.asyncio
 async def test_get_user_statistics_no_attempts(
     client: AsyncClient,
     test_user_token: str,
@@ -554,7 +529,6 @@ async def test_get_user_statistics_no_attempts(
 # ============================================================================
 
 
-@pytest.mark.asyncio
 async def test_get_quiz_history_empty(
     client: AsyncClient,
     test_user_token: str,
@@ -574,7 +548,6 @@ async def test_get_quiz_history_empty(
     assert len(data["results"]) == 0
 
 
-@pytest.mark.asyncio
 async def test_get_quiz_history_with_pagination(
     client: AsyncClient,
     test_user_token: str,
@@ -625,7 +598,6 @@ async def test_get_quiz_history_with_pagination(
     assert len(data["results"]) == 5
 
 
-@pytest.mark.asyncio
 async def test_get_quiz_history_with_company_filter(
     client: AsyncClient,
     test_user_token: str,
@@ -682,7 +654,6 @@ async def test_get_quiz_history_with_company_filter(
     assert data["results"][0]["company_id"] == test_company.id
 
 
-@pytest.mark.asyncio
 async def test_get_quiz_history_with_quiz_filter(
     client: AsyncClient,
     test_user_token: str,
@@ -737,7 +708,6 @@ async def test_get_quiz_history_with_quiz_filter(
     assert data["results"][0]["quiz_id"] == test_quiz.id
 
 
-@pytest.mark.asyncio
 async def test_get_quiz_history_unauthorized(
     client: AsyncClient,
 ):
@@ -752,7 +722,6 @@ async def test_get_quiz_history_unauthorized(
 # ============================================================================
 
 
-@pytest.mark.asyncio
 async def test_get_user_statistics_with_attempts(
     client: AsyncClient,
     test_user_token: str,
@@ -898,7 +867,6 @@ async def test_get_user_statistics_with_attempts(
     assert data["last_attempt_at"] is not None
 
 
-@pytest.mark.asyncio
 async def test_get_user_statistics_with_company_filter(
     client: AsyncClient,
     test_user_token: str,
@@ -986,7 +954,6 @@ async def test_get_user_statistics_with_company_filter(
     assert data["total_quizzes_taken"] == 1
 
 
-@pytest.mark.asyncio
 async def test_average_calculation_correct_formula(
     client: AsyncClient,
     test_user_token: str,
