@@ -27,4 +27,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run tests
+        env:
+          SECRET_KEY: ci-test-secret-key-not-used-in-production
+          REFRESH_SECRET_KEY: ci-test-refresh-secret-key-not-used-in-production
         run: python -m pytest --tb=short -q
