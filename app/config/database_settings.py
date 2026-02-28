@@ -15,6 +15,9 @@ class DatabaseSettings(BaseConfig):
     # If set, individual POSTGRES_* variables are ignored.
     DATABASE_URL: str | None = None
 
+    # Set to True on Railway/cloud (PostgreSQL requires SSL).
+    DATABASE_SSL: bool = False
+
     @model_validator(mode="after")
     def build_database_url(self) -> "DatabaseSettings":
         if self.DATABASE_URL:
