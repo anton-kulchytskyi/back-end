@@ -5,6 +5,8 @@ from sqlalchemy.orm import declarative_base
 
 from app.config import settings
 
+_connect_args = {"ssl": "require"} if settings.database.DATABASE_SSL else {}
+
 # Create async engine
 engine = create_async_engine(
     settings.database.DATABASE_URL,
@@ -13,6 +15,7 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20,
+    connect_args=_connect_args,
 )
 
 # Create async session factory
