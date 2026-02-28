@@ -1,171 +1,189 @@
-# 🚀 FastAPI Application
+# Meduzzen Backend
 
-## 📁 Project Overview
+A production-ready **FastAPI** backend for a corporate quiz and analytics platform. Built as an internship project with a focus on clean architecture, async performance, and real-world deployment.
 
-This is a **production-ready FastAPI backend** with modern authentication, database integration, and scalable architecture.
-The application is fully containerized using **Docker** and **Docker Compose** with **PostgreSQL** and **Redis** databases.
+**Live API:** https://back-end-production-4466.up.railway.app
+**Swagger UI:** https://back-end-production-4466.up.railway.app/docs
 
-### ✨ Key Features
+---
 
-- **🔐 Dual Authentication System**
-- **💾 Database Integration**
-- **🏗️ Clean Architecture**
-- **🧪 Comprehensive Testing**
-- **🐳 Full Containerization**
+## Tech Stack
 
------
+| Layer | Technology |
+|---|---|
+| Framework | FastAPI 0.119 + Uvicorn |
+| Database | PostgreSQL (asyncpg, SQLAlchemy 2.0 async) |
+| Migrations | Alembic |
+| Cache | Redis |
+| Auth | JWT (access + refresh tokens), Auth0 support |
+| Real-time | WebSockets |
+| Scheduling | APScheduler |
+| File I/O | openpyxl (Excel import/export) |
+| Config | Pydantic Settings v2 |
+| Testing | pytest + pytest-asyncio, aiosqlite (in-memory) |
+| CI/CD | GitHub Actions (CI) + Railway (CD) |
+| Containerization | Docker + Docker Compose |
 
-## ⚙️ Setup Instructions
+---
 
-### 1. Clone the repository
+## Features
+
+### Users & Authentication
+- Registration and login with JWT (access + refresh tokens)
+- Auth0 integration support
+- Profile update and account deletion
+
+### Company Management
+- Create and manage companies with role-based access (Owner / Admin / Member)
+- Invitation system: owners invite users; users can also send join requests
+- Admin appointment and removal
+- Cascade deletion of all company data on company delete
+
+### Quiz System
+- Create quizzes with multiple questions (2–4 answers each, 1+ correct)
+- Public quiz view (hides correct answers) vs. admin view (shows all)
+- **Excel import** — bulk create or update quizzes from `.xlsx` files
+- **Export** user or company quiz data to JSON or CSV
+
+### Quiz Attempts & Analytics
+- Submit quiz attempts with automatic score calculation
+- User analytics: overall rating, per-quiz averages, last completion timestamps
+- Company analytics: per-user averages, per-quiz breakdowns, last attempt tracking
+- Date range filtering on all analytics endpoints
+
+### Notifications
+- In-app notifications (e.g., new quiz created in your company)
+- **Real-time delivery via WebSocket**
+- Mark individual or all notifications as read
+
+### Scheduled Jobs
+- Daily quiz reminders sent to company members at midnight (APScheduler cron)
+
+---
+
+## Architecture
+
+```
+app/
+├── config/          # Pydantic Settings (database, redis, auth, app)
+├── core/            # DB engine, Redis client, logger, exceptions, WebSocket manager
+├── db/              # SQLAlchemy models + repositories (Repository Pattern)
+├── schemas/         # Pydantic request/response schemas
+├── services/        # Business logic (Service Layer)
+├── routers/         # FastAPI route handlers
+└── main.py          # App factory, middleware, scheduler setup
+```
+
+Key patterns used:
+- **Repository Pattern** — each model has a dedicated repository with typed queries
+- **Unit of Work** — atomic transactions across multiple repositories via a single session
+- **Dependency Injection** — services and UoW injected via FastAPI `Depends()`
+- **Async first** — all DB and Redis operations are fully async
+
+---
+
+## API Overview
+
+| Resource | Endpoints |
+|---|---|
+| Auth | `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `POST /auth/refresh` |
+| Users | `GET /users`, `GET /users/{id}`, `PUT /users/me`, `DELETE /users/me` |
+| Companies | Full CRUD + member/admin/invitation/request management |
+| Quizzes | Full CRUD + Excel import + export |
+| Quiz Attempts | Submit attempt, user statistics, history |
+| Analytics | Company-level and user-level dashboards |
+| Notifications | List, mark as read, WebSocket stream |
+| Health | `GET /health/db`, `GET /health/redis` |
+
+Full interactive documentation: [/docs](https://back-end-production-4466.up.railway.app/docs)
+
+---
+
+## Local Development
+
+### Prerequisites
+- Docker + Docker Compose
+- Python 3.13
+
+### 1. Clone and configure
 
 ```bash
 git clone <repo-url>
 cd back-end
-```
-
-### 2. Create environment file
-
-```bash
 cp .env.sample .env
-# Edit .env if needed
 ```
 
-### 3. Create and activate a virtual environment
-
-```bash
-python -m venv .venv
-source .venv/Scripts/activate     # Windows
-source .venv/bin/activate         # macOS / Linux
-```
-
-### 4. Install dependencies and activate code quality hooks
-
-Install core and development dependencies (including pre-commit, Ruff, Black, and isort):
-
-```bash
-pip install -r requirements-dev.txt
-```
-
-Next, activate the Git pre-commit hooks
-
-```bash
-pre-commit install
-```
-
-### 5a. With Docker Compose (Recommended)
-
-Start all services (PostgreSQL, Redis, FastAPI):
+### 2. Run with Docker Compose (recommended)
 
 ```bash
 docker-compose up --build
 ```
 
-Then open your browser at:
-👉 [http://localhost:8000](http://localhost:8000)
+App available at: http://localhost:8000
 
-### 5b. Locally (without Docker)
+### 3. Run locally (without Docker app container)
 
-Start databases only:
-
+Start only databases:
 ```bash
 docker-compose up postgres redis
 ```
 
-Update `.env` for local development:
+Install dependencies and pre-commit hooks:
 ```bash
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/fastapi_db
-REDIS_URL=redis://localhost:6379/0
+pip install -r requirements-dev.txt
+pre-commit install
 ```
 
-Run the application:
-
+Run the app:
 ```bash
 python -m app.main
 ```
 
------
+---
 
-## 💾 Database Migrations (Alembic)
-
-Database schema changes are managed using **Alembic**. All migration commands must be executed **inside the `fastapi_app` container** to ensure the correct environment and dependencies are used.
-
-### 1. Generate a new migration script
-
-Use `alembic revision --autogenerate` to automatically detect changes in your SQLAlchemy models and generate a new migration file.
+## Database Migrations
 
 ```bash
-docker exec -it fastapi_app alembic revision --autogenerate -m "descriptive_message_here"
-```
+# Generate migration from model changes
+docker exec -it fastapi_app alembic revision --autogenerate -m "description"
 
-### 2. Apply migrations
-
-Use `alembic upgrade` to apply all pending migration scripts to the database.
-
-```bash
+# Apply all pending migrations
 docker exec -it fastapi_app alembic upgrade head
-```
 
-### 3. Downgrade migrations
-
-To revert the last applied migration:
-
-```bash
+# Revert last migration
 docker exec -it fastapi_app alembic downgrade -1
 ```
 
-### 4. Check current database version
+---
+
+## Testing
 
 ```bash
-docker exec -it fastapi_app alembic current
-```
+# Run all tests
+python -m pytest --tb=short -q
 
------
-
-
-## 🧪 Run Tests
-
-To execute tests using **pytest**:
-
-```bash
+# With verbose output
 pytest tests/ -v
 ```
 
------
+Tests use an **in-memory SQLite database** (aiosqlite) and mocked Redis — no external services needed.
+CI runs automatically on every pull request and push to `main`/`develop` via GitHub Actions.
 
-## 🐳 Docker Commands
+---
 
-### Start all services
-```bash
-docker-compose up --build
-```
+## Deployment
 
-### Start in detached mode
-```bash
-docker-compose up -d
-```
+The application is deployed on **Railway** with managed PostgreSQL and Redis.
 
-### View logs
-```bash
-docker-compose logs -f app
-```
+Environment variables required for production:
 
-### Stop all services
-```bash
-docker-compose down
-```
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | Full PostgreSQL connection string (Railway injects automatically) |
+| `REDIS_URL` | Full Redis connection string (Railway injects automatically) |
+| `DATABASE_SSL` | Set to `True` for Railway PostgreSQL |
+| `SECRET_KEY` | JWT signing secret |
+| `REFRESH_SECRET_KEY` | JWT refresh signing secret |
+| `BACKEND_CORS_ORIGINS` | Comma-separated list of allowed frontend origins |
 
-### Remove volumes (⚠️ deletes data)
-```bash
-docker-compose down -v
-```
-
-### Access PostgreSQL
-```bash
-docker exec -it fastapi_postgres psql -U postgres -d fastapi_db
-```
-
-### Access Redis CLI
-```bash
-docker exec -it fastapi_redis redis-cli
-```
+On startup, the container runs `alembic upgrade head` before launching the app (`start.sh`).
