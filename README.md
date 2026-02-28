@@ -1,4 +1,4 @@
-# Meduzzen Backend
+# Qoach — Backend
 
 A production-ready **FastAPI** backend for a corporate quiz and analytics platform. Built as an internship project with a focus on clean architecture, async performance, and real-world deployment.
 

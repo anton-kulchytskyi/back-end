@@ -2,7 +2,8 @@ from app.config.base import BaseConfig
 
 
 class AppSettings(BaseConfig):
-    PROJECT_NAME: str = "My FastAPI Project"
+    PROJECT_NAME: str = "Qoach"
+    ENV: str = "development"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     RELOAD: bool = True

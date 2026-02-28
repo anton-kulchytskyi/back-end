@@ -33,7 +33,12 @@ async def lifespan(app: FastAPI):
     logger.info("Scheduler stopped")
 
 
-app = FastAPI(title=settings.app.PROJECT_NAME, lifespan=lifespan)
+_title = (
+    settings.app.PROJECT_NAME
+    if settings.app.ENV == "production"
+    else f"[DEV] {settings.app.PROJECT_NAME}"
+)
+app = FastAPI(title=_title, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
