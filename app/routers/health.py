@@ -81,8 +81,9 @@ async def check_all(
     db_host = _extract_host(settings.database.DATABASE_URL)
     redis_host = _extract_host(settings.redis.REDIS_URL)
 
-    db_source = "railway" if settings.database.DATABASE_SSL else "local"
-    redis_source = "local" if redis_host in ("localhost", "127.0.0.1") else "railway"
+    is_railway = settings.database.DATABASE_SSL
+    db_source = "railway" if is_railway else "local"
+    redis_source = "railway" if is_railway else "local"
 
     db_status, db_error = "ok", None
     try:
