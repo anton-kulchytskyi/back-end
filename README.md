@@ -93,9 +93,38 @@ Key patterns used:
 | Quiz Attempts | Submit attempt, user statistics, history |
 | Analytics | Company-level and user-level dashboards |
 | Notifications | List, mark as read, WebSocket stream |
-| Health | `GET /health/db`, `GET /health/redis` |
+| Health | `GET /health/db`, `GET /health/redis`, `GET /health/all` |
 
 Full interactive documentation: [/docs](https://back-end-production-4466.up.railway.app/docs)
+
+### Health Endpoints
+
+| Endpoint | Description |
+|---|---|
+| `GET /` | Basic liveness check — confirms the app is running |
+| `GET /health/db` | PostgreSQL connectivity check (`SELECT 1`) |
+| `GET /health/redis` | Redis connectivity check (`PING`) |
+| `GET /health/all` | Combined check: DB + Redis in one call, with environment info |
+
+`GET /health/all` returns a unified response showing the status, source environment, and resolved host for each service:
+
+```json
+{
+  "status": "ok",
+  "database": {
+    "status": "ok",
+    "source": "local",
+    "host": "localhost"
+  },
+  "redis": {
+    "status": "ok",
+    "source": "local",
+    "host": "localhost"
+  }
+}
+```
+
+`source` is `"local"` when connecting to Docker Compose services, and `"railway"` when connecting to managed Railway infrastructure. `status` at the top level is `"ok"` when both services are healthy, or `"degraded"` if either fails (with an `"error"` field added to the failing service).
 
 ---
 
