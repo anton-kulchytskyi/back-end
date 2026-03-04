@@ -2,11 +2,8 @@ name: Railway — Nightly Sleep Schedule
 
 on:
   schedule:
-    # Час у UTC. Київ — UTC+2 (зима) / UTC+3 (літо).
-    # Зупинка о 22:30 за Києвом (20:30 UTC)
-    - cron: '30 20 * * *'
-    # Запуск о 08:00 за Києвом (06:00 UTC)
-    - cron: '0 6 * * *'
+    - cron: '30 20 * * *'  # 22:30 Kyiv (UTC+2 winter) — stop
+    - cron: '0 6 * * *'    # 08:00 Kyiv (UTC+2 winter) — start
   workflow_dispatch:
     inputs:
       action:
@@ -19,11 +16,11 @@ on:
 
 jobs:
   manage-railway:
-    name: Manage Railway Service
+    name: Railway ${{ github.event.inputs.action || (github.event.schedule == '30 20 * * *' && 'stop' || 'start') }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Determine Action
+      - name: Determine action
         id: config
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
@@ -34,69 +31,52 @@ jobs:
             echo "action=start" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Execute Railway API Action
+      - name: Stop service
+        if: steps.config.outputs.action == 'stop'
+        env:
+          TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+          SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+          ENV_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
         run: |
-          ACTION="${{ steps.config.outputs.action }}"
-          SERVICE_ID="${{ secrets.RAILWAY_SERVICE_ID }}"
-          ENV_ID="${{ secrets.RAILWAY_ENVIRONMENT_ID }}"
-          TOKEN="${{ secrets.RAILWAY_API_TOKEN }}"
+          RESPONSE=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg q 'query($serviceId:String!,$environmentId:String!){deployments(input:{serviceId:$serviceId,environmentId:$environmentId}){edges{node{id status}}}}' \
+              --argjson v "{\"serviceId\":\"$SERVICE_ID\",\"environmentId\":\"$ENV_ID\"}" \
+              '{query:$q,variables:$v}')")
 
-          if [[ "$ACTION" == "stop" ]]; then
-            echo "🔍 Searching for active deployment in environment $ENV_ID..."
-            
-            # Запит на пошук активного деплою
-            QUERY='query deployments($serviceId: String!, $environmentId: String!) {
-              deployments(input: { serviceId: $serviceId, environmentId: $environmentId }) {
-                edges {
-                  node {
-                    id
-                    status
-                  }
-                }
-              }
-            }'
-            
-            VARS=$(printf '{"serviceId":"%s","environmentId":"%s"}' "$SERVICE_ID" "$ENV_ID")
-            PAYLOAD=$(jq -n --arg q "$QUERY" --argjson v "$VARS" '{query: $q, variables: $v}')
+          DEPLOY_ID=$(echo "$RESPONSE" | jq -r '.data.deployments.edges[]? | select(.node.status=="SUCCESS") | .node.id' | head -1)
 
-            RESPONSE=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
-              -H "Authorization: Bearer $TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "$PAYLOAD")
-
-            DEPLOY_ID=$(echo "$RESPONSE" | jq -r '.data.deployments.edges[]? | select(.node.status == "SUCCESS") | .node.id' | head -n 1)
-
-            if [[ -z "$DEPLOY_ID" || "$DEPLOY_ID" == "null" ]]; then
-              echo "⚠️ No active SUCCESS deployment found. Already stopped?"
-            else
-              echo "🛑 Removing deployment: $DEPLOY_ID"
-              
-              REMOVE_QUERY='mutation deploymentRemove($id: String!) { deploymentRemove(id: $id) }'
-              REMOVE_VARS=$(printf '{"id":"%s"}' "$DEPLOY_ID")
-              REMOVE_PAYLOAD=$(jq -n --arg q "$REMOVE_QUERY" --argjson v "$REMOVE_VARS" '{query: $q, variables: $v}')
-
-              curl -s -X POST https://backboard.railway.app/graphql/v2 \
-                -H "Authorization: Bearer $TOKEN" \
-                -H "Content-Type: application/json" \
-                -d "$REMOVE_PAYLOAD"
-              
-              echo -e "\n✅ Service stopped successfully."
-            fi
-
-          else
-            echo "🚀 Starting service (Triggering redeploy)..."
-            
-            REDEPLOY_QUERY='mutation serviceInstanceRedeploy($serviceId: String!, $environmentId: String!) {
-              serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
-            }'
-            
-            REDEPLOY_VARS=$(printf '{"serviceId":"%s","environmentId":"%s"}' "$SERVICE_ID" "$ENV_ID")
-            REDEPLOY_PAYLOAD=$(jq -n --arg q "$REDEPLOY_QUERY" --argjson v "$REDEPLOY_VARS" '{query: $q, variables: $v}')
-
-            curl -s -X POST https://backboard.railway.app/graphql/v2 \
-              -H "Authorization: Bearer $TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "$REDEPLOY_PAYLOAD"
-            
-            echo -e "\n✅ Redeploy triggered successfully."
+          if [[ -z "$DEPLOY_ID" || "$DEPLOY_ID" == "null" ]]; then
+            echo "No active deployment found — already stopped?"
+            exit 0
           fi
+
+          echo "Removing deployment $DEPLOY_ID..."
+          curl -s -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg q 'mutation($id:String!){deploymentRemove(id:$id)}' \
+              --argjson v "{\"id\":\"$DEPLOY_ID\"}" \
+              '{query:$q,variables:$v}')"
+
+          echo "Service stopped."
+
+      - name: Start service
+        if: steps.config.outputs.action == 'start'
+        env:
+          TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+          SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+          ENV_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
+        run: |
+          curl -s -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg q 'mutation($serviceId:String!,$environmentId:String!){serviceInstanceRedeploy(serviceId:$serviceId,environmentId:$environmentId)}' \
+              --argjson v "{\"serviceId\":\"$SERVICE_ID\",\"environmentId\":\"$ENV_ID\"}" \
+              '{query:$q,variables:$v}')"
+
+          echo "Redeploy triggered."
