@@ -32,30 +32,34 @@ jobs:
       - name: Execute Railway Action
         run: |
           if [[ "${{ steps.vars.outputs.action }}" == "stop" ]]; then
-            echo "Stopping service..."
-            # 1. Отримуємо ID останнього активного деплою
-            DEPLOY_ID=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
-              -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "query": "query { deployments(input: { serviceId: \"${{ secrets.RAILWAY_SERVICE_ID }}\", environmentId: \"${{ secrets.RAILWAY_ENVIRONMENT_ID }}\" }) { edges { node { id status } } } }"
-              }' | jq -r '.data.deployments.edges[0].node.id')
-
-            echo "Removing deployment: $DEPLOY_ID"
+            echo "Searching for active deployment..."
             
-            # 2. Видаляємо деплой (це зупиняє сервіс)
-            curl -s -X POST https://backboard.railway.app/graphql/v2 \
+            # Отримуємо ID останнього успішного деплою
+            QUERY='query { deployments(input: { serviceId: "${{ secrets.RAILWAY_SERVICE_ID }}", environmentId: "${{ secrets.RAILWAY_ENVIRONMENT_ID }}" }) { edges { node { id status } } } }'
+            RESPONSE=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
               -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}" \
               -H "Content-Type: application/json" \
-              -d "{ \"query\": \"mutation { deploymentRemove(id: \\\"$DEPLOY_ID\\\") }\" }"
+              -d "{\"query\": \"$QUERY\"}")
+
+            # Витягуємо ID першого деплою зі статусом SUCCESS
+            DEPLOY_ID=$(echo $RESPONSE | jq -r '.data.deployments.edges[] | select(.node.status == "SUCCESS") | .node.id' | head -n 1)
+
+            if [[ -z "$DEPLOY_ID" || "$DEPLOY_ID" == "null" ]]; then
+              echo "No active SUCCESS deployment found. Maybe it is already stopped?"
+            else
+              echo "Removing active deployment: $DEPLOY_ID"
+              curl -s -X POST https://backboard.railway.app/graphql/v2 \
+                -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}" \
+                -H "Content-Type: application/json" \
+                -d "{\"query\": \"mutation { deploymentRemove(id: \\\"$DEPLOY_ID\\\") }\"}"
+              echo "Done."
+            fi
           
           else
             echo "Starting service..."
-            # Тригеримо новий деплой (Redeploy)
             curl -s -X POST https://backboard.railway.app/graphql/v2 \
               -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}" \
               -H "Content-Type: application/json" \
-              -d '{
-                "query": "mutation { serviceInstanceRedeploy(serviceId: \"${{ secrets.RAILWAY_SERVICE_ID }}\", environmentId: \"${{ secrets.RAILWAY_ENVIRONMENT_ID }}\") }"
-              }'
+              -d "{\"query\": \"mutation { serviceInstanceRedeploy(serviceId: \\\"${{ secrets.RAILWAY_SERVICE_ID }}\\\", environmentId: \\\"${{ secrets.RAILWAY_ENVIRONMENT_ID }}\\\") }\"}"
+            echo "Redeploy triggered."
           fi
