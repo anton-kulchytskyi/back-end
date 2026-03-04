@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from zoneinfo import ZoneInfo
 
 import uvicorn
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -11,6 +12,8 @@ from app.core.logger import logger
 from app.routers import router
 from app.services.scheduler.quiz_reminder_service import QuizReminderService
 
+_KYIV_TZ = ZoneInfo("Europe/Kyiv")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,13 +22,13 @@ async def lifespan(app: FastAPI):
 
     scheduler.add_job(
         reminder_service.send_quiz_reminders,
-        trigger=CronTrigger(hour=0, minute=0),
+        trigger=CronTrigger(hour=22, minute=0, timezone=_KYIV_TZ),
         id="quiz_reminders",
         replace_existing=True,
     )
 
     scheduler.start()
-    logger.info("Scheduler started — quiz reminders will run daily at midnight")
+    logger.info("Scheduler started — quiz reminders will run daily at 22:00 Kyiv time")
 
     yield
 

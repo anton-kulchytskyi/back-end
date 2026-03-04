@@ -1,0 +1,77 @@
+name: Railway — Sleep/Wake Schedule
+
+on:
+  schedule:
+    # All times UTC. Ukraine is UTC+2 (winter) / UTC+3 (summer — update cron accordingly after DST).
+    - cron: '30 20 * * *'  # 22:30 Kyiv (UTC+2) — stop service
+    - cron: '0 6 * * *'    # 08:00 Kyiv (UTC+2) — start service
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Manual override: start or stop the Railway service'
+        required: true
+        type: choice
+        options:
+          - start
+          - stop
+
+jobs:
+  manage-railway:
+    name: Set Railway replicas
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine target replica count
+        id: config
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ github.event.inputs.action }}" == "stop" ]]; then
+              echo "replicas=0" >> "$GITHUB_OUTPUT"
+              echo "action=stop" >> "$GITHUB_OUTPUT"
+            else
+              echo "replicas=1" >> "$GITHUB_OUTPUT"
+              echo "action=start" >> "$GITHUB_OUTPUT"
+            fi
+          elif [[ "${{ github.event.schedule }}" == "30 20 * * *" ]]; then
+            echo "replicas=0" >> "$GITHUB_OUTPUT"
+            echo "action=stop" >> "$GITHUB_OUTPUT"
+          else
+            echo "replicas=1" >> "$GITHUB_OUTPUT"
+            echo "action=start" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update Railway service replicas (${{ steps.config.outputs.action }})
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d @- <<'EOF'
+          {
+            "query": "mutation ServiceInstanceUpdate($serviceId: String!, $environmentId: String!, $input: ServiceInstanceUpdateInput!) { serviceInstanceUpdate(serviceId: $serviceId, environmentId: $environmentId, input: $input) }",
+            "variables": {
+              "serviceId": "${{ secrets.RAILWAY_SERVICE_ID }}",
+              "environmentId": "${{ secrets.RAILWAY_ENVIRONMENT_ID }}",
+              "input": { "numReplicas": ${{ steps.config.outputs.replicas }} }
+            }
+          }
+          EOF
+          )
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          if [[ "$HTTP_CODE" != "200" ]]; then
+            echo "Railway API call failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          if echo "$BODY" | grep -q '"errors"'; then
+            echo "Railway GraphQL returned errors"
+            exit 1
+          fi
+
+          echo "Done — Railway service ${{ steps.config.outputs.action }} succeeded (replicas: ${{ steps.config.outputs.replicas }})"
