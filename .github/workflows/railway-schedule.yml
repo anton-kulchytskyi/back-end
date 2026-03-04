@@ -71,7 +71,7 @@ jobs:
             else
               echo "🛑 Removing deployment: $DEPLOY_ID"
               
-              REMOVE_QUERY='mutation deploymentRemove($id: ID!) { deploymentRemove(id: $id) }'
+              REMOVE_QUERY='mutation deploymentRemove($id: String!) { deploymentRemove(id: $id) }'
               REMOVE_VARS=$(printf '{"id":"%s"}' "$DEPLOY_ID")
               REMOVE_PAYLOAD=$(jq -n --arg q "$REMOVE_QUERY" --argjson v "$REMOVE_VARS" '{query: $q, variables: $v}')
 
