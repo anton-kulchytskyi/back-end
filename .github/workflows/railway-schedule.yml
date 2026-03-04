@@ -1,106 +1,61 @@
-name: Railway — Sleep/Wake Schedule
+name: Railway — Nightly Sleep Schedule
 
 on:
   schedule:
-    # All times UTC. Ukraine is UTC+2 (winter) / UTC+3 (summer — update cron accordingly after DST).
-    - cron: '30 20 * * *'  # 22:30 Kyiv (UTC+2) — stop service
-    - cron: '0 6 * * *'    # 08:00 Kyiv (UTC+2) — start service
+    # 22:30 Kyiv (UTC+2 взимку)
+    - cron: '30 20 * * *'
+    # 08:00 Kyiv (UTC+2 взимку)
+    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       action:
-        description: 'Manual override: start or stop the Railway service'
+        description: 'Manual override'
         required: true
         type: choice
-        options:
-          - start
-          - stop
-
-env:
-  RAILWAY_API: https://backboard.railway.app/graphql/v2
+        options: [start, stop]
 
 jobs:
   manage-railway:
-    name: Set Railway service state
     runs-on: ubuntu-latest
-
     steps:
-      - name: Determine action
-        id: config
+      - name: Determine Action
+        id: vars
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "action=${{ github.event.inputs.action }}" >> "$GITHUB_OUTPUT"
+            echo "action=${{ github.event.inputs.action }}" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event.schedule }}" == "30 20 * * *" ]]; then
-            echo "action=stop" >> "$GITHUB_OUTPUT"
+            echo "action=stop" >> $GITHUB_OUTPUT
           else
-            echo "action=start" >> "$GITHUB_OUTPUT"
+            echo "action=start" >> $GITHUB_OUTPUT
           fi
 
-      # ── STOP: find active deployment and remove it ───────────────────────────
-      - name: Get active deployment ID
-        if: steps.config.outputs.action == 'stop'
-        id: deployment
-        env:
-          TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-          SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
-          ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
+      - name: Execute Railway Action
         run: |
-          RESPONSE=$(curl -s -X POST "$RAILWAY_API" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"{ deployments(input: { serviceId: \\\"$SERVICE_ID\\\", environmentId: \\\"$ENVIRONMENT_ID\\\" }) { edges { node { id status } } } }\"}")
+          if [[ "${{ steps.vars.outputs.action }}" == "stop" ]]; then
+            echo "Stopping service..."
+            # 1. Отримуємо ID останнього активного деплою
+            DEPLOY_ID=$(curl -s -X POST https://backboard.railway.app/graphql/v2 \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "query": "query { deployments(input: { serviceId: \"${{ secrets.RAILWAY_SERVICE_ID }}\", environmentId: \"${{ secrets.RAILWAY_ENVIRONMENT_ID }}\" }) { edges { node { id status } } } }"
+              }' | jq -r '.data.deployments.edges[0].node.id')
 
-          echo "Response: $RESPONSE"
-
-          DEPLOYMENT_ID=$(echo "$RESPONSE" | jq -r '
-            .data.deployments.edges[]
-            | select(.node.status == "SUCCESS" or .node.status == "DEPLOYING")
-            | .node.id' | head -1)
-
-          if [[ -z "$DEPLOYMENT_ID" || "$DEPLOYMENT_ID" == "null" ]]; then
-            echo "No active deployment found — already stopped?"
-            echo "id=" >> "$GITHUB_OUTPUT"
+            echo "Removing deployment: $DEPLOY_ID"
+            
+            # 2. Видаляємо деплой (це зупиняє сервіс)
+            curl -s -X POST https://backboard.railway.app/graphql/v2 \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{ \"query\": \"mutation { deploymentRemove(id: \\\"$DEPLOY_ID\\\") }\" }"
+          
           else
-            echo "Active deployment: $DEPLOYMENT_ID"
-            echo "id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+            echo "Starting service..."
+            # Тригеримо новий деплой (Redeploy)
+            curl -s -X POST https://backboard.railway.app/graphql/v2 \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "query": "mutation { serviceInstanceRedeploy(serviceId: \"${{ secrets.RAILWAY_SERVICE_ID }}\", environmentId: \"${{ secrets.RAILWAY_ENVIRONMENT_ID }}\") }"
+              }'
           fi
-
-      - name: Remove active deployment (stop)
-        if: steps.config.outputs.action == 'stop' && steps.deployment.outputs.id != ''
-        env:
-          TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-        run: |
-          RESPONSE=$(curl -s -X POST "$RAILWAY_API" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { deploymentRemove(id: \\\"${{ steps.deployment.outputs.id }}\\\") }\"}")
-
-          echo "Response: $RESPONSE"
-
-          if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
-            echo "Failed to remove deployment"
-            exit 1
-          fi
-
-          echo "Done — Railway service stopped"
-
-      # ── START: trigger redeploy ──────────────────────────────────────────────
-      - name: Redeploy service (start)
-        if: steps.config.outputs.action == 'start'
-        env:
-          TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-          SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
-          ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
-        run: |
-          RESPONSE=$(curl -s -X POST "$RAILWAY_API" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"mutation { serviceInstanceRedeploy(serviceId: \\\"$SERVICE_ID\\\", environmentId: \\\"$ENVIRONMENT_ID\\\") }\"}")
-
-          echo "Response: $RESPONSE"
-
-          if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
-            echo "Failed to redeploy service"
-            exit 1
-          fi
-
-          echo "Done — Railway service started"
